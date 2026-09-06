@@ -5,7 +5,7 @@ import { resolve } from "node:path";
 import { existsSync } from "node:fs";
 
 const root = fileURLToPath(new URL("../", import.meta.url));
-const envFile = resolve(root, ".env.local");
+const envFile = process.env.IKTARA_ENV_FILE || resolve(root, ".env.local");
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 const compute = resolve(root, "../../shastra-compute");
 const python = resolve(compute, ".venv/bin/python");
@@ -17,10 +17,18 @@ if (!existsSync(python) || !existsSync(resolve(root, "dist/index.html"))) {
 }
 // Keep credentials in this process environment; never write generated keys to disk.
 const key = process.env.COMPUTE_API_KEY || randomBytes(32).toString("hex");
+const computePort = process.env.COMPUTE_PORT || "8001";
+if (
+  !/^\d+$/.test(computePort) ||
+  Number(computePort) < 1024 ||
+  Number(computePort) > 65535
+) {
+  throw new Error("COMPUTE_PORT must be an unprivileged TCP port.");
+}
 const env = {
   ...process.env,
   COMPUTE_API_KEY: key,
-  COMPUTE_URL: "http://127.0.0.1:8001",
+  COMPUTE_URL: `http://127.0.0.1:${computePort}`,
 };
 const children = [];
 let stopping = false;
@@ -52,7 +60,7 @@ launch(
     "--host",
     "127.0.0.1",
     "--port",
-    "8001",
+    computePort,
   ],
   compute,
   { ...env, API_KEY: key },

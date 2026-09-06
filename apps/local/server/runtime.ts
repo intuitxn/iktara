@@ -3,6 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { conversationPrompt, type ChatInput } from "./prompts.js";
 import type { OpenCode } from "@opencode-ai/sdk";
+import { WORLDS } from "./worlds.js";
 
 export const appRoot = fileURLToPath(new URL("../", import.meta.url));
 const runtimeRoot = path.resolve(
@@ -77,7 +78,12 @@ export async function initializeRuntime(): Promise<OpenCode.Interface> {
           formatter: false,
           lsp: false,
           permissions: [{ action: "*", resource: "*", effect: "deny" }],
-          agents: { iktara: { mode: "primary", steps: 1 } },
+          agents: Object.fromEntries(
+            Object.values(WORLDS).map((world) => [
+              world.agent,
+              { mode: "primary", steps: 2 },
+            ]),
+          ),
           default_agent: "iktara",
           ...(model ? { model } : {}),
         }),
@@ -95,7 +101,12 @@ export async function initializeRuntime(): Promise<OpenCode.Interface> {
       try {
         await instance.plugin.awaitActivation({ location: { directory } });
         const agents = await instance.agent.list({ location: { directory } });
-        if (agents.data.length !== 1 || agents.data[0]?.id !== "iktara")
+        if (
+          agents.data.length !== Object.keys(WORLDS).length ||
+          !Object.values(WORLDS).every((world) =>
+            agents.data.some((agent) => agent.id === world.agent),
+          )
+        )
           throw new Error("Iktara plugin did not initialize");
         if (configured)
           await instance.integration.connect.key({
@@ -121,15 +132,25 @@ export async function initializeRuntime(): Promise<OpenCode.Interface> {
   return starting;
 }
 
-export async function chat(input: ChatInput): Promise<string> {
+export async function chat(
+  input: ChatInput,
+  options: { workspaceKey?: string } = {},
+): Promise<string> {
   const instance = await initializeRuntime();
+  if (options.workspaceKey && !/^[0-9a-f-]{36}$/.test(options.workspaceKey))
+    throw new Error("Invalid internal workspace identity");
+  const sessionDirectory = options.workspaceKey
+    ? path.join(runtimeRoot, "people", options.workspaceKey)
+    : directory;
+  await mkdir(sessionDirectory, { recursive: true, mode: 0o700 });
+  const world = WORLDS[input.page || "reflection"];
   const split = model!.indexOf("/");
   const request = { signal: AbortSignal.timeout(90_000) };
   const session = await instance.sessions.create(
     {
-      location: { directory },
-      agent: "iktara",
-      title: "Iktara reflection",
+      location: { directory: sessionDirectory },
+      agent: world.agent,
+      title: `Iktara ${world.id}`,
       model: {
         providerID: model!.slice(0, split),
         id: model!.slice(split + 1),

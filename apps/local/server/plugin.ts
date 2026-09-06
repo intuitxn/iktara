@@ -1,20 +1,23 @@
 import { Plugin } from "@opencode-ai/plugin";
-import { IKTARA_PROMPT } from "./prompts.js";
+import { WORLDS } from "./worlds.js";
 
 /** OpenCode v2 plugin: the product harness owns agents and available capabilities. */
 export default Plugin.define({
   id: "intuitxn.iktara",
   async setup(ctx) {
     await ctx.agent.transform((agents) => {
+      const allowed = new Set<string>(
+        Object.values(WORLDS).map((world) => world.agent),
+      );
       for (const agent of agents.list())
-        if (String(agent.id) !== "iktara") agents.remove(String(agent.id));
-      agents.update("iktara", (agent) => {
-        agent.description =
-          "A grounded companion for reflection and symbolic astrology";
-        agent.system = IKTARA_PROMPT;
-        agent.steps = 1;
-        agent.permissions = [{ action: "*", resource: "*", effect: "deny" }];
-      });
+        if (!allowed.has(String(agent.id))) agents.remove(String(agent.id));
+      for (const world of Object.values(WORLDS))
+        agents.update(world.agent, (agent) => {
+          agent.description = world.description;
+          agent.system = world.prompt;
+          agent.steps = 2;
+          agent.permissions = [{ action: "*", resource: "*", effect: "deny" }];
+        });
       agents.default("iktara");
     });
     await ctx.tool.transform((tools) => {
@@ -25,7 +28,11 @@ export default Plugin.define({
     });
     await ctx.session.hook("context", (context) => {
       context.tools = {};
-      context.system = [{ type: "text", text: IKTARA_PROMPT }];
+      const world =
+        Object.values(WORLDS).find(
+          (item) => item.agent === String(context.agent),
+        ) || WORLDS.reflection;
+      context.system = [{ type: "text", text: world.prompt }];
     });
   },
 });

@@ -9,6 +9,7 @@ You have no filesystem, shell, network, or external action tools. Do not claim t
 
 export type ChatInput = {
   message: string;
+  page?: "reflection" | "chart";
   profile?: Record<string, unknown> | null;
   chart?: Record<string, unknown> | null;
   history?: Array<{ role: "user" | "assistant"; content: string }>;

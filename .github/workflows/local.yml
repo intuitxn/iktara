@@ -3,19 +3,42 @@ on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: iktara-local-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   local:
+    name: Test, build, and boot
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: apps/local
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 22.22.0
           cache: npm
           cache-dependency-path: apps/local/package-lock.json
+      - uses: astral-sh/setup-uv@v6
+        with:
+          version: 0.11.7
+      - run: uv sync --frozen --python 3.12
+        working-directory: shastra-compute
       - run: npm ci
-      - run: npm run build
+        working-directory: apps/local
       - run: npm test
+        working-directory: apps/local
+      - run: npm run build
+        working-directory: apps/local
+      - name: Boot services and verify real chart calculation
+        run: node scripts/deploy-smoke.mjs .
+      - name: Check host entry point
+        run: node --test scripts/deploy-host.test.mjs
+
+# PRs execute only on GitHub-hosted runners. The Mac polls successful push-to-main
+# runs for the exact immutable revision; it is never a self-hosted CI runner.

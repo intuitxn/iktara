@@ -21,14 +21,20 @@ Open **http://127.0.0.1:3210**. No Google sign-in, email login, subscription, or
 
 | Piece | Responsibility |
 | --- | --- |
-| `apps/local/src` | React interface; birth profile, chart, and conversation saved in the browser |
-| `apps/local/server` | Product HTTP API, OpenCode v2 agent plugin, versioned prompts |
+| `apps/local/src` | React interface for server-owned anonymous browser workspaces |
+| `apps/local/server` | Owned profiles/charts/history, durable jobs, page agents, OpenCode v2 plugin |
 | `shastra-compute/src/local_app.py` | Local chart-only Python service using Swiss Ephemeris |
 | `apps/local/scripts/start.mjs` | Starts and stops the local services together |
 
 The product API binds to loopback on port 3210; chart computation binds to loopback on 8001 with a per-run service key. OpenCode is an embedded runtime, not a public coding-agent endpoint. Its configuration/state are separate from the operator's personal harness. Model credentials stay on the server.
 
-The SDK/plugin development release is pinned; this is a local prototype, not a claim of a completed production migration. The existing `forsee.life` deployment is independent until its domain is connected to this host.
+The SDK/plugin development release is pinned. DeepSeek V4 Flash through OpenCode Zen is the selected model. The existing `forsee.life` deployment is independent until its domain is connected to this host.
+
+## Contribute and deploy
+
+Start with [CONTRIBUTING.md](CONTRIBUTING.md): `npm run setup`, then `npm run dev` on port 3220. Codex reads AGENTS.md; OpenCode has a project `iktara-builder` agent. Both use the shared contributor prompt.
+
+Reviewed main commits that pass CI are built and health-checked by the host's background deployer, then activated with rollback to the prior healthy release on failure. See [deployment operations](ops/DEPLOYMENT.md) and [the product world](docs/WORLD.md).
 
 ## Upstream application
 

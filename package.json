@@ -1,6 +1,10 @@
 {
   "name": "sudarshan",
   "private": true,
+  "scripts": {
+    "setup": "node scripts/setup.mjs",
+    "dev": "node scripts/dev.mjs"
+  },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
     "@auth/core": "^0.37.0",

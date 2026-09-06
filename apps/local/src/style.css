@@ -748,3 +748,41 @@ footer span span {
 body {
   overflow-x: clip;
 }
+/* Each space has its own conversation and background companion. */
+.world-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 0 28px 14px;
+}
+.world-tabs button {
+  border: 1px solid #dcd8ce;
+  border-radius: 999px;
+  background: transparent;
+  padding: 8px 15px;
+  color: #686455;
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+.world-tabs button[aria-selected="true"] {
+  background: #edeada;
+  color: #343c30;
+  border-color: #b6bea2;
+}
+.world-tabs button:focus-visible {
+  outline: 2px solid #727d59;
+  outline-offset: 3px;
+}
+.message p {
+  margin: 0 0 0.8em;
+}
+.message p:last-child {
+  margin-bottom: 0;
+}
+.message pre {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.message a {
+  text-decoration: underline;
+}

@@ -63,3 +63,4 @@ apps/web/.open-next/
 
 # Local product runtime and private agent state
 apps/local/.runtime/
+apps/local/.runtime-dev/
