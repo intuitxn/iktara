@@ -25,18 +25,28 @@
       "western",
       "compare"
     ],
-    "status": "Engine sources preserved; full evidence integration is separate ongoing work."
+    "status": "Engine sources preserved; full evidence integration is separate ongoing work.",
+    "parity": "Engine sources must match upstream/main (astropersonalised); verify with the /engine-check command."
   },
   "context": [
     "AGENTS.md",
     "CONTRIBUTING.md",
+    "opencode.json",
     "docs/PROJECT.md",
     "docs/WORLD.md",
+    "docs/RUNTIME.md",
     "docs/RELEASES.md",
     "docs/prompts/contributor.md",
     "apps/local/server/worlds.ts",
     "apps/local/server/prompts.ts",
     "apps/local/server/plugin.ts",
+    ".opencode/agents/product/iktara.md",
+    ".opencode/agents/product/iktara-chart.md",
+    ".opencode/commands/verify.md",
+    ".opencode/commands/engine-check.md",
+    ".opencode/skills/astro-engine/SKILL.md",
+    ".opencode/skills/product-runtime/SKILL.md",
+    ".opencode/skills/project-context/SKILL.md",
     "ops/DEPLOYMENT.md"
   ],
   "workflow": {

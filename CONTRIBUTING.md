@@ -18,7 +18,7 @@ Install Node.js 22.22+ and uv first. Setup installs the pinned project dependenc
 
 > Read AGENTS.md, CONTRIBUTING.md, and docs/WORLD.md. Implement this change: [describe the user outcome]. Work on my branch, keep the product's no-signup flow and workspace isolation intact, and make the smallest complete change. Treat page behavior, agent prompts, and service boundaries as code. Run npm test and npm run build in apps/local, check the relevant browser flow using synthetic data, and prepare a pull request explaining the user-visible change and evidence. Do not deploy from my laptop, read production secrets, or message the team unless I ask.
 
-The reusable prompt is in [docs/prompts/contributor.md](docs/prompts/contributor.md). Codex automatically reads the repository's [AGENTS.md](AGENTS.md), following its [documented instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md). With OpenCode v2, select the project `iktara-builder` agent from `.opencode/agents/iktara-builder.md`; [Markdown agents](https://opencode.ai/v2/docs/agents) are native project configuration.
+The reusable prompt is in [docs/prompts/contributor.md](docs/prompts/contributor.md). Codex automatically reads the repository's [AGENTS.md](AGENTS.md), following its [documented instruction discovery](https://learn.chatgpt.com/docs/agent-configuration/agents-md). With OpenCode v2, `iktara-builder` from `.opencode/agents/iktara-builder.md` is the default project agent (`opencode.json`); [Markdown agents](https://opencode.ai/v2/docs/agents) are native project configuration. Workflow commands live in `.opencode/commands/`, skills in `.opencode/skills/`, and the runtime contract is [docs/RUNTIME.md](docs/RUNTIME.md).
 
 ## Ship a change
 

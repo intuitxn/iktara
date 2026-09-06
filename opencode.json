@@ -1,0 +1,31 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "default_agent": "iktara-builder",
+  "permissions": [
+    {
+      "action": "read",
+      "resource": "**/.env.local",
+      "effect": "deny"
+    },
+    {
+      "action": "read",
+      "resource": "**/.runtime/**",
+      "effect": "deny"
+    },
+    {
+      "action": "read",
+      "resource": "**/.runtime-dev/**",
+      "effect": "deny"
+    },
+    {
+      "action": "shell",
+      "resource": "git push *",
+      "effect": "ask"
+    }
+  ],
+  "instructions": [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/RUNTIME.md"
+  ]
+}

@@ -32,7 +32,11 @@ The SDK/plugin development release is pinned. DeepSeek V4 Flash through OpenCode
 
 ## Contribute and deploy
 
-Start with [CONTRIBUTING.md](CONTRIBUTING.md): `npm run setup`, then `npm run dev` on port 3220. Codex reads AGENTS.md; OpenCode has a project `iktara-builder` agent. Both use the shared contributor prompt.
+Start with [CONTRIBUTING.md](CONTRIBUTING.md): `npm run setup`, then `npm run dev` on port 3220. Codex reads AGENTS.md; OpenCode has a project `iktara-builder` agent (the default set by `opencode.json`). Both use the shared contributor prompt.
+
+### Agent layer
+
+The agent layer is OpenCode files and profiles, not scripts. `opencode.json` sets the default agent and global guardrails; agent profiles live in `.opencode/agents/` (the team builder plus spec mirrors of the product agents), workflow commands in `.opencode/commands/`, and skills in `.opencode/skills/`. Read [docs/RUNTIME.md](docs/RUNTIME.md) for the runtime contract, and `/engine-check` verifies the astro engine still matches the prior astropersonalised version (`upstream`).
 
 Reviewed main commits that pass CI are built and health-checked by the host's background deployer, then activated with rollback to the prior healthy release on failure. See [deployment operations](ops/DEPLOYMENT.md) and [the product world](docs/WORLD.md).
 

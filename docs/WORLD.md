@@ -39,4 +39,4 @@ The product uses OpenCode's embedded v2 runtime behind its own API. ACP is a pro
 
 ## Add a place
 
-Define its human purpose, page ID, agent prompt, allowed services, stored data, and result presentation together. Register it in the world configuration, then test that its context belongs to the current workspace and that another workspace cannot fetch its jobs or results. Ship page and prompt changes through the same reviewed CI/CD process.
+Define its human purpose, page ID, agent prompt, allowed services, stored data, and result presentation together. Register it in the world configuration, add a matching `.opencode/agents/product/<agent>.md` spec mirror (see `docs/RUNTIME.md`), then test that its context belongs to the current workspace and that another workspace cannot fetch its jobs or results. Ship page and prompt changes through the same reviewed CI/CD process.
