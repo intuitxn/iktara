@@ -5,7 +5,7 @@ Public address: `https://forsee.life`. On 2026-09-06 the new runtime was verifie
 
 ## Team loop
 
-1. Open an Iktara change thread in the verified Intuitxn Buzz forum. Record the user outcome, owner, acceptance criteria, and a decision needed from Om, Kush, or Shubham.
+1. Open or continue the relevant thread in `#iktara` only. Record the user outcome, owner, acceptance criteria, and a decision needed from Om, Kush, or Shubham. Keep updates, changelog and handoffs in that channel; do not cross-post to general forums or the global changelog.
 2. Link the thread from a feature branch/PR. Use `npm run setup` then `npm run dev` (port 3220). Give Codex or OpenCode `docs/prompts/contributor.md` plus the agreed brief. The deployed app stays on 3210.
 3. Share the prompt changes and a deliberately written session handoff using `docs/templates/session-handoff.md`. Link the exact revision, PR and test evidence. Do not export raw runtime sessions.
 4. A human teammate reviews the exact change. Passing CI and a reviewed merge to main trigger the existing host deployer. Buzz discussion alone cannot execute code or bypass GitHub review.
@@ -17,17 +17,18 @@ GitHub supports draft release review before publication: [official release guide
 
 ## Buzz connection
 
-Telepathy documents an `iktara` project/home stream and the `intuitxn-general` forum. Live IDs and membership must be verified before posting. The existing Desk queue emits forum posts, not stream messages: do not route it to the stream by guessing a name or UUID.
+The sole Iktara destination is channel `78fedf61-f8e2-43df-9413-37d98d6a430a` (`iktara`). Verify membership before posting. The consolidated update root is `7870050866517cfb18c528bb05e1dfb20e005333d9a61cb667eaae50fbb54135`; the release log and continuation handoff are in its thread. Do not distribute Iktara material across `intuitxn-general`, `telepathy`, or the global `changelog`.
 
-From the sibling Telepathy checkout, in an authorized Buzz runtime:
+In an authorized Buzz runtime, after reviewing the exact message:
 
 ```sh
-npm run desk -- doctor
-npm run desk -- queue VERIFIED_FORUM_UUID /absolute/path/to/reviewed-release.md
-npm run desk -- send OUTBOX_ID DIGEST
+buzz --relay https://intuitxn.communities.buzz.xyz messages send \
+  --channel 78fedf61-f8e2-43df-9413-37d98d6a430a --kind 9 \
+  --reply-to 7870050866517cfb18c528bb05e1dfb20e005333d9a61cb667eaae50fbb54135 \
+  --content - < /absolute/path/to/reviewed-update.md
 ```
 
-Use the actual queue result's ID and digest; read the exact text before sending. The current Iktara workflow produces release artifacts; **an automatic CI-to-Buzz sender is not connected**. This intentional review boundary keeps build logs, secrets, and unaccepted claims out of company announcements. The actual Buzz signing identity is separate from the human approving a release.
+Record the accepted event receipt. A transport timeout is not proof of failure: check the thread before retrying to avoid duplicates. The existing Desk forum-only queue must not be used for this stream until it supports the correct channel/thread routing. The current Iktara workflow produces release artifacts; **an automatic CI-to-Buzz sender is not connected**. Keep build logs, secrets, and unaccepted claims out of announcements. The actual Buzz signing identity is separate from the human approving a release.
 
 ## Shared sessions and access
 

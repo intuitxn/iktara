@@ -6,7 +6,7 @@ Live inspection on 2026-09-06 found an agent member in the Iktara channel with p
 
 ## Where work belongs
 
-Manage Iktara tasks in the Buzz project itself: owner, status, acceptance criteria, linked branch/PR, agreed prompt, and reviewed handoff. Use forum threads for decisions and releases, not as a duplicate task tracker. Git retains executable code and version history. Shared context means reviewed project sources, not customer conversations, credentials, or unrestricted access to the host.
+Manage Iktara tasks in the Buzz project itself: owner, status, acceptance criteria, linked branch/PR, agreed prompt, and reviewed handoff. Keep all Iktara updates, decisions, releases and handoffs in threads within `#iktara` only, not general forums or the global changelog. Do not create a duplicate task tracker. Git retains executable code and version history. Shared context means reviewed project sources, not customer conversations, credentials, or unrestricted access to the host.
 
 No agent automatically knows everything about Iktara. Give the existing project agent this source map, the agreed task and decision links, and the exact checkout/deployed revisions; require it to distinguish preserved source, tested implementation, and live capability.
 
