@@ -11,7 +11,7 @@
   ],
   "decisionLinks": [],
   "limitations": [
-    "Public-domain cutover requires Cloudflare access and verification",
-    "Shared team runtime access and Buzz publication are not activated"
+    "Original Vedic/KP/Western/Compare evidence pipeline is not connected in the deployed initial release",
+    "Shared live coding-session access and automatic CI-to-Buzz publication are not activated"
   ]
 }

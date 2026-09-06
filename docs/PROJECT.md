@@ -1,6 +1,24 @@
 # Iktara in Buzz
 
-The project agent is **iktara-builder**. It owns implementation and verification in the Iktara repository. The customer agents (`iktara` and `iktara-chart`) remain inside the product runtime. Telepathy Prime can scope a request; Build can execute an accepted Desk job using Iktara's repository instructions; Steward can prepare the handoff. Those roles do not establish a connected Buzz bot identity by themselves.
+**iktara-builder** is the repository's coding-agent definition, not proof of a running Buzz identity. The customer agents (`iktara` and `iktara-chart`) remain inside the product runtime. Telepathy can scope and execute accepted jobs using Iktara's repository instructions. Those roles do not establish a connected Buzz bot identity by themselves.
+
+Live inspection on 2026-09-06 found an agent member in the Iktara channel with public-key label `051722e8…068f`; its readable identity, instructions, and runtime could not be verified from its profile. Attractor is separately configured as the Attri portfolio coordinator, not an Iktara-only expert. Do not rename, replace, or grant broader access to either identity to resolve this ambiguity. Verify the existing member's mapping first.
+
+## Where work belongs
+
+Manage Iktara tasks in the Buzz project itself: owner, status, acceptance criteria, linked branch/PR, agreed prompt, and reviewed handoff. Use forum threads for decisions and releases, not as a duplicate task tracker. Git retains executable code and version history. Shared context means reviewed project sources, not customer conversations, credentials, or unrestricted access to the host.
+
+No agent automatically knows everything about Iktara. Give the existing project agent this source map, the agreed task and decision links, and the exact checkout/deployed revisions; require it to distinguish preserved source, tested implementation, and live capability.
+
+## Engine status checked on 2026-09-06
+
+The active release checked was `e97bef332345bec07f8e176399cee552450187b3`.
+
+- Original calculation engine: active. `local_app.py` mounts the existing chart router, which calls `src/core/calculator.py` (`ChartCalculator`, Swiss Ephemeris). The chart router, calculator, and engine sources match the checked `upstream/main` revision.
+- Original Vedic/KP/Western/Compare interpretation pipeline: not active in that release. The original reading router extracts evidence through these engines; `local_app.py` does not mount it. The local product sends saved chart context directly to its OpenCode page agent instead.
+- Language model: DeepSeek V4 Flash through OpenCode. Changing the language model does not replace deterministic calculations, but chart context alone does not restore the original evidence pipeline.
+
+Preserve the original engines. Complete and review the separate integration work before describing the live product as having original reading-engine parity.
 
 ## Sources are project context
 

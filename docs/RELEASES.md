@@ -1,7 +1,7 @@
 # Iktara: decisions, development, and releases
 
 Product name: **Iktara**. Organization: **Intuitxn**. Repository: `intuitxn/iktara`.
-Intended public address: `https://forsee.life`. That address is not evidence that this new runtime has been routed there.
+Public address: `https://forsee.life`. On 2026-09-06 the new runtime was verified over HTTPS with a real model reply, Secure/HttpOnly cookie, and cross-workspace job denial. This is a dated verification, not a guarantee of current uptime.
 
 ## Team loop
 
@@ -37,4 +37,4 @@ Live collaborative access to the same OpenCode session is **not implemented**. I
 
 ## Public cutover
 
-Cloudflare access is required. Follow the [Cloudflare Tunnel setup guide](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), using the product service at `http://127.0.0.1:3210` as origin. Record the current DNS/route first for rollback, set the private host's `IKTARA_PUBLIC_ORIGIN=https://forsee.life`, restart and verify, then switch the route and test HTTPS/cookies/real replies from outside the Mac. Do not route chart ports, smoke-test ports, or a raw agent API publicly. Existing `forsee.life` remains unchanged until that authenticated operation is performed.
+The initial cutover has been verified. Do not repeat it during ordinary development. For recovery or a future host move, follow the [Cloudflare Tunnel setup guide](https://developers.cloudflare.com/cloudflare-one/networks/connectors/cloudflare-tunnel/get-started/create-remote-tunnel/), using the product service at `http://127.0.0.1:3210` as origin. Record the current DNS/route first for rollback, configure `IKTARA_PUBLIC_ORIGIN=https://forsee.life`, and verify HTTPS/cookies/real replies after routing. Never expose chart ports, smoke-test ports, or a raw agent API. The Mac must remain awake and the hosting services running.
