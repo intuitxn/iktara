@@ -1,9 +1,11 @@
 {
-  "name": "sudarshan",
+  "name": "iktara",
   "private": true,
   "scripts": {
     "setup": "node scripts/setup.mjs",
-    "dev": "node scripts/dev.mjs"
+    "dev": "node scripts/dev.mjs",
+    "release:check": "node scripts/release-record.mjs check",
+    "release:notes": "node scripts/release-record.mjs"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {

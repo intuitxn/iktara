@@ -1,0 +1,17 @@
+{
+  "product": "Iktara",
+  "version": "0.1.0",
+  "model": "opencode/deepseek-v4-flash",
+  "runtime": "opencode-v2",
+  "publicUrl": "https://forsee.life",
+  "changes": [
+    "No-signup reflection and chart spaces with DeepSeek V4 Flash",
+    "Private browser workspaces and durable background replies",
+    "Reviewed main deployments with health checks and rollback"
+  ],
+  "decisionLinks": [],
+  "limitations": [
+    "Public-domain cutover requires Cloudflare access and verification",
+    "Shared team runtime access and Buzz publication are not activated"
+  ]
+}

@@ -1,0 +1,42 @@
+name: Prepare Iktara release
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: iktara-release
+  cancel-in-progress: false
+jobs:
+  draft:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22.22.0
+      - name: Verify exact main revision passed push CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          CURRENT=$(gh api "repos/$GITHUB_REPOSITORY/branches/main" --jq .commit.sha)
+          test "$CURRENT" = "$GITHUB_SHA"
+          RESULT=$(gh api "repos/$GITHUB_REPOSITORY/actions/workflows/local.yml/runs?branch=main&event=push&head_sha=$GITHUB_SHA&per_page=30" --jq '.workflow_runs | sort_by(.id) | last | .conclusion')
+          test "$RESULT" = success
+      - name: Generate reviewable release artifacts
+        run: |
+          node --test scripts/release-record.test.mjs
+          node scripts/release-record.mjs json > "$RUNNER_TEMP/iktara-release.json"
+          node scripts/release-record.mjs > "$RUNNER_TEMP/iktara-release.md"
+      - name: Create draft only; a human publishes after review
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          TAG=$(node -p "'iktara-v' + require('./release.json').version")
+          gh release create "$TAG" "$RUNNER_TEMP/iktara-release.json" --target "$GITHUB_SHA" --draft --title "Iktara $TAG" --notes-file "$RUNNER_TEMP/iktara-release.md"

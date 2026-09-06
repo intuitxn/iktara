@@ -22,6 +22,8 @@ The reusable prompt is in [docs/prompts/contributor.md](docs/prompts/contributor
 
 ## Ship a change
 
+For the Buzz decision loop, version tags, model/prompt release records, and shared development handoffs, read [docs/RELEASES.md](docs/RELEASES.md).
+
 Push your branch and open a pull request. A teammate reviews the change; the `local` CI job must pass. Merge into `main`. The host deployer watches successful CI for the exact current main commit, prepares a new release, checks it, switches the running release, and restores the prior release if startup fails. See the deployment guide under `ops/` for host controls and recovery.
 
 Only trusted changes merged into `main` run on the product host. Public pull requests run on GitHub-hosted workers and never receive the production environment. Changing a prompt follows the same CI/CD path as changing a page or service.

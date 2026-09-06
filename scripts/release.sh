@@ -3,6 +3,12 @@
 # Default: patch (0.0.1 → 0.0.2)
 set -euo pipefail
 
+if [[ -f release.json ]]; then
+  echo "Iktara releases use release.json and the Prepare Iktara release GitHub workflow."
+  echo "Read docs/RELEASES.md. This upstream deployment script is disabled in Iktara."
+  exit 1
+fi
+
 BUMP="${1:-patch}"
 
 # Get latest tag

@@ -33,6 +33,10 @@ jobs:
         working-directory: apps/local
       - run: npm test
         working-directory: apps/local
+      - name: Validate release contract
+        run: |
+          node scripts/release-record.mjs check
+          node --test scripts/release-record.test.mjs
       - run: npm run build
         working-directory: apps/local
       - name: Boot services and verify real chart calculation

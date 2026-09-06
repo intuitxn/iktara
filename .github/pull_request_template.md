@@ -8,6 +8,10 @@ Which page, prompt, tool/service, or workspace data contract changes?
 
 ## Evidence
 
+- Buzz decision thread and human owner:
+- Sanitized contributor prompt/handoff (no raw sessions):
+- Release manifest/version impact:
+
 - Local tests and build:
 - Browser or API flow checked:
 - Workspace isolation or migration impact, if applicable:
