@@ -5,6 +5,8 @@ import path from "node:path";
 const root = fileURLToPath(new URL("../", import.meta.url));
 for (const [command, args, folder] of [
   ["uv", ["sync", "--frozen", "--python", "3.12"], "shastra-compute"],
+  ["uv", ["run", "--frozen", "python", "-m", "unittest", "discover", "-s", "tests", "-p", "parity*.py", "-v"], "shastra-compute"],
+  ["uv", ["run", "--frozen", "python", "-m", "unittest", "discover", "-s", "tests", "-p", "test*.py", "-v"], "shastra-compute"],
   ["npm", ["ci"], "apps/local"],
   ["npm", ["test"], "apps/local"],
   ["npm", ["run", "build"], "apps/local"],

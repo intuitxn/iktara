@@ -15,7 +15,7 @@ The engine in this repository is the prior version from Om's astropersonalised r
 | Runtime copies | `shastra-compute/src/core/`, `shastra-compute/src/engines/` |
 | Systems | `vedic.py`, `kp.py`, `western.py`, `compare.py` (+ shared `base.py`) |
 | Chart model | `shastra-compute/src/core/models/chart.py` |
-| Local service | `shastra-compute/src/local_app.py` (chart router only) |
+| Local service | `shastra-compute/src/local_app.py` (chart and evidence routers) |
 
 ## Parity check
 
@@ -29,9 +29,9 @@ No output means parity with the prior astropersonalised engine at the current up
 ## Active vs preserved
 
 - Active: deterministic chart calculation (`ChartCalculator`, Swiss Ephemeris) through `src/core/calculator.py` and the chart router.
-- Preserved, not mounted: the Vedic/KP/Western/Compare reading-evidence pipeline under `src/engines/`. `local_app.py` does not mount the reading router.
+- Candidate: original engines under `src/engines/` are mounted through the local evidence adapter, not the legacy model/reading router. OpenCode's scoped chart_evidence plugin calls this adapter. The live host may still run an earlier revision; verify it separately.
 
-Never describe the live product as having reading-engine parity until that integration is completed and reviewed.
+Run `.venv/bin/python -m unittest discover -s tests -p 'parity*.py' -v` and the `test*.py` suite from shastra-compute. docs/ENGINE-PARITY.md pins upstream and explains inherited KP weekday/dasha limitations. Never describe the candidate as live until reviewed and host-verified.
 
 ## Working with the engine
 

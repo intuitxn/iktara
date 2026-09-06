@@ -23,12 +23,12 @@ Open **http://127.0.0.1:3210**. No Google sign-in, email login, subscription, or
 | --- | --- |
 | `apps/local/src` | React interface for server-owned anonymous browser workspaces |
 | `apps/local/server` | Owned profiles/charts/history, durable jobs, page agents, OpenCode v2 plugin |
-| `shastra-compute/src/local_app.py` | Local chart-only Python service using Swiss Ephemeris |
+| `shastra-compute/src/local_app.py` | Local chart and original-engine evidence service using Swiss Ephemeris |
 | `apps/local/scripts/start.mjs` | Starts and stops the local services together |
 
 The product API binds to loopback on port 3210; chart computation binds to loopback on 8001 with a per-run service key. OpenCode is an embedded runtime, not a public coding-agent endpoint. Its configuration/state are separate from the operator's personal harness. Model credentials stay on the server.
 
-The SDK/plugin development release is pinned. DeepSeek V4 Flash through OpenCode Zen is the selected model. The existing `forsee.life` deployment is independent until its domain is connected to this host.
+The SDK/plugin development release is pinned. DeepSeek V4 Flash through OpenCode Zen is the selected model. The public host at `forsee.life` runs its separately verified active revision. A contributor branch or local build is not a deployment receipt.
 
 ## Contribute and deploy
 

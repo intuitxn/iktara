@@ -18,22 +18,22 @@ The deployed instance reads private `shared/.env.local` and stores databases und
 ## World and runtime
 
 - `server/worlds.ts`: reflection and chart page definitions, agent IDs, intent, and prompts.
-- `server/plugin.ts`: OpenCode v2 page agents with no coding tools or MCP servers.
+- `server/plugin.ts`: OpenCode v2 page agents with a scoped chart_evidence capability, no coding tools or MCP servers.
 - `server/prompts.ts`: shared product behavior and structured context.
 - `server/workspace.ts`: owner-filtered SQLite profile, chart, history, and job storage.
 - `server/jobs.ts`: background worker; accepted requests survive browser disconnection.
 - `server/runtime.ts`: embedded OpenCode, per-owner execution directories, short-lived inference sessions.
 - `server/index.ts`: HTTP API and static UI.
 
-SDK/plugin are pinned to `0.0.0-dev-19191`, with project-local Bun 1.4.2. This is the newer [OpenCode v2 SDK](https://opencode.ai/v2/docs/build/sdk), not the older v1 SDK's `/v2` client. Agent steps are 2 to avoid injecting a coding-budget summary instruction on the first response; available tools remain empty.
+SDK/plugin are pinned to `0.0.0-dev-19191`, with project-local Bun 1.4.2. This is the newer [OpenCode v2 SDK](https://opencode.ai/v2/docs/build/sdk), not the older v1 SDK's `/v2` client. Reflection uses 2 steps and no tools. Chart uses 4 steps and only the no-argument chart_evidence capability; the model must call it before answering. Every call is bound to the accepted job's private context, cached per turn and revoked on session exit.
 
 ## Data and API
 
 An opaque HttpOnly cookie identifies an anonymous browser workspace. This is not a verified person/account and provides no cross-device recovery. Profiles, charts, messages, and jobs are stored on the host, scoped to the server-resolved owner. Clearing the workspace removes its product data; clearing only cookies loses access. The cookie expires after 30 days. There is no automated expired-workspace purge yet.
 
-GET `/api/workspace` opens/restores the workspace. PUT `/api/profile` saves its profile. POST `/api/chart` calculates and saves its chart. POST `/api/chat` accepts `{message,page,requestId?}` and returns `202 {jobId}`. GET `/api/jobs/:id` returns only the caller's job. DELETE `/api/workspace` clears the caller's data. GET `/api/health` reports service readiness.
+GET `/api/workspace` opens/restores the workspace. PUT `/api/profile` saves its profile. POST `/api/chart` calculates and saves its chart. POST `/api/chat` accepts `{message,page,requestId?,method?,domain?}` and returns `202 {jobId}`. GET `/api/jobs/:id` returns only the caller's job. DELETE `/api/workspace` clears the caller's data. GET `/api/health` reports service readiness.
 
-Reflection and Chart have distinct histories. The backend supplies profile/chart/history to the model; clients cannot impersonate a user by sending an ID. Queued jobs resume after restart; interrupted inference becomes an explicit error for retry rather than silently making a second paid request. Reloading the UI reconnects to saved jobs and responses.
+Chart readings require a saved chart; method is vedic/kp/western/compare (default compare), topic defaults to general and is explicitly selected, not automatically classified. Saved messages/jobs include method, domain and the exact private evidence bundle for successful answers. See ../../docs/EVIDENCE.md. Reflection and Chart have distinct histories. The backend supplies profile/chart/history to the model; clients cannot impersonate a user by sending an ID. Queued jobs resume after restart; interrupted inference becomes an explicit error for retry rather than silently making a second paid request. Reloading the UI reconnects to saved jobs and responses.
 
 Birthplace is sent to Nominatim for geocoding. Messages and relevant profile/chart context go to OpenCode's configured model provider. OpenCode execution sessions are removed after each request, but deletion is not a guarantee of forensic erasure from database files. No private context belongs in git or Buzz.
 

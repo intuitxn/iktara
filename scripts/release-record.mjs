@@ -19,7 +19,7 @@ export function record(root) {
   const release = validateRelease(JSON.parse(readFileSync(path.join(root, 'release.json'), 'utf8')));
   const git = (...args) => execFileSync('git', args, { cwd: root, encoding: 'utf8' }).trim();
   if (git('status', '--porcelain', '--untracked-files=no')) throw Error('Commit tracked changes before generating an immutable release record');
-  const files = ['apps/local/server/prompts.ts', 'apps/local/server/worlds.ts', 'apps/local/server/plugin.ts', 'docs/prompts/contributor.md'];
+  const files = ['apps/local/server/prompts.ts', 'apps/local/server/worlds.ts', 'apps/local/server/plugin.ts', 'apps/local/server/agent-tools.ts', 'apps/local/server/evidence.ts', 'shastra-compute/src/api/v1/evidence.py', 'docs/prompts/contributor.md', 'project.json'];
   return {
     ...release,
     tag: `iktara-v${release.version}`,

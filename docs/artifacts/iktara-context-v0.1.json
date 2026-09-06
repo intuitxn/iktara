@@ -1,0 +1,51 @@
+{
+  "artifactId": "14d736bc-0ee0-41bf-9756-fd6bdaae41b1",
+  "version": "0.1",
+  "status": "draft",
+  "audience": "Iktara project",
+  "sourceSha256": "136023349355c4cdc437cbbe95c4b65e4308d1b733f77ee1db396129d8f9c950",
+  "source": "draft.md",
+  "project": "iktara",
+  "prd": "buzz://issue?id=c8f8947285fa37778a428521778f92f7ff91ba001da225efeea7e9280172fc96&owner=e43fcfd4d6505fab2deb4a9d4d1604b391af548c7995cc1c53321b7502b4d7e7&d=iktara",
+  "tasks": [
+    {
+      "title": "Om 1 \u2014 Establish original-engine parity baseline",
+      "reference": "buzz://issue?id=534ad3a734f141374756e6c1c0b4d4b9a0654131fb4c82e99defcabd18cd3bc2&owner=e43fcfd4d6505fab2deb4a9d4d1604b391af548c7995cc1c53321b7502b4d7e7&d=iktara",
+      "proposedOwner": "Om",
+      "assignmentAccepted": false
+    },
+    {
+      "title": "Om 2 \u2014 Integrate engine evidence into private answers",
+      "reference": "buzz://issue?id=9ef7e893f09cd8cb3591c7a26811e4116f4193607cd3abb4dcf1ee135c89cd66&owner=e43fcfd4d6505fab2deb4a9d4d1604b391af548c7995cc1c53321b7502b4d7e7&d=iktara",
+      "proposedOwner": "Om",
+      "assignmentAccepted": false
+    },
+    {
+      "title": "Om 3 \u2014 Deliver question, evidence, and follow-up experience",
+      "reference": "buzz://issue?id=1167f71738ae4ff22dae70f296dd10ca244dce8b90290be44240b1f8597384d6&owner=e43fcfd4d6505fab2deb4a9d4d1604b391af548c7995cc1c53321b7502b4d7e7&d=iktara",
+      "proposedOwner": "Om",
+      "assignmentAccepted": false
+    }
+  ],
+  "workflowId": "0179916b-7361-4a43-a94c-341d2e19dff7",
+  "workflowStatus": "configured; no run started; runtime/deployment bridge not connected",
+  "agent": {
+    "name": "agent-iktara",
+    "status": "instructions prepared; existing managed identity not verified"
+  },
+  "taskTemplate": {
+    "outcome": "",
+    "artifactId": "14d736bc-0ee0-41bf-9756-fd6bdaae41b1",
+    "artifactVersion": "0.1",
+    "sourceSha256": "136023349355c4cdc437cbbe95c4b65e4308d1b733f77ee1db396129d8f9c950",
+    "sourceLinks": [],
+    "acceptedDecisions": [],
+    "owner": "",
+    "reviewer": "",
+    "acceptanceCriteria": [],
+    "inputContract": "",
+    "expectedOutput": "",
+    "allowedScope": "",
+    "evidenceRequired": []
+  }
+}

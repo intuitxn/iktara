@@ -25,7 +25,8 @@
       "western",
       "compare"
     ],
-    "status": "Engine sources preserved; full evidence integration is separate ongoing work.",
+    "status": "Candidate: preserved engines mounted through scoped chart_evidence plugin; live host revision must be verified independently.",
+    "upstreamRevision": "8485494f5cbfdd40b5dca578bfc2498974d7e118",
     "parity": "Engine sources must match upstream/main (astropersonalised); verify with the /engine-check command."
   },
   "context": [
@@ -35,11 +36,18 @@
     "docs/PROJECT.md",
     "docs/WORLD.md",
     "docs/RUNTIME.md",
+    "docs/EVIDENCE.md",
+    "docs/ENGINE-PARITY.md",
+    "docs/TEAM-RUNTIME.md",
+    "docs/artifacts/iktara-prd-v0.1.md",
+    "docs/artifacts/iktara-context-v0.1.json",
     "docs/RELEASES.md",
     "docs/prompts/contributor.md",
     "apps/local/server/worlds.ts",
     "apps/local/server/prompts.ts",
     "apps/local/server/plugin.ts",
+    "apps/local/server/agent-tools.ts",
+    "apps/local/server/evidence.ts",
     ".opencode/agents/product/iktara.md",
     ".opencode/agents/product/iktara-chart.md",
     ".opencode/commands/verify.md",

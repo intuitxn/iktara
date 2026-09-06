@@ -6,7 +6,43 @@ import "@fontsource/instrument-serif/latin-400.css";
 import "@fontsource/instrument-serif/latin-400-italic.css";
 import "./style.css";
 
-import { useWorkspace } from "./useWorkspace";
+import { useWorkspace, type ReadingDomain, type ReadingEvidence, type ReadingMethod } from "./useWorkspace";
+
+const methods: Array<[ReadingMethod, string]> = [["compare", "Compare lenses"], ["vedic", "Vedic"], ["kp", "KP"], ["western", "Western"]];
+const domains: ReadingDomain[] = ["general", "career", "relationships", "marriage", "family", "money", "health", "purpose", "personality", "education", "spirituality", "timing", "compatibility"];
+const chartStarters = ["What patterns does my chart suggest?", "How does my chart describe my relationships?", "What can I reflect on about my work?"];
+
+function Evidence({ evidence }: { evidence: ReadingEvidence }) {
+  return (
+    <details className="reading-evidence">
+      <summary>Explore calculation evidence <span>({evidence.items.length})</span></summary>
+      <p className="evidence-context">{evidence.method === "kp" ? "KP" : evidence.method} · {evidence.domain} · birth time: {evidence.birth_time_quality}</p>
+      {evidence.limitations.length > 0 && (
+        <div className="evidence-limitations">
+          <h3>Limits of this reading</h3>
+          <ul>{evidence.limitations.map((limit, index) => <li key={index}>{limit}</li>)}</ul>
+        </div>
+      )}
+      <div className="evidence-items">
+        {evidence.items.map((item, index) => (
+          <details key={`${item.id}-${index}`}>
+            <summary><code>{item.id}</code><span>{item.system} · {item.kind.replaceAll("_", " ")}</span></summary>
+            <pre>{typeof item.detail === "string" ? item.detail : JSON.stringify(item.detail, null, 2)}</pre>
+          </details>
+        ))}
+      </div>
+      {!evidence.items.length && <p>No calculation items were available for this reading.</p>}
+      <details className="evidence-provenance">
+        <summary>Reading provenance</summary>
+        <dl>
+          <dt>Evidence set</dt><dd><code>{evidence.id}</code></dd>
+          <dt>Engine revision</dt><dd><code>{evidence.engine_revision}</code></dd>
+          <dt>Chart digest</dt><dd><code>{evidence.chart_digest}</code></dd>
+        </dl>
+      </details>
+    </details>
+  );
+}
 
 const starters = [
   "I feel pulled in different directions.",
@@ -51,9 +87,17 @@ function App() {
     activeJob,
     legacy,
     importLegacy,
+    method,
+    setMethod,
+    domain,
+    setDomain,
+    reconnect,
+    failedMessage,
+    retry,
   } = useWorkspace();
   const conversationEnd = useRef<HTMLDivElement>(null);
   const composer = useRef<HTMLTextAreaElement>(null);
+  const birthDetails = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (history.length)
       conversationEnd.current?.scrollIntoView({
@@ -107,7 +151,7 @@ function App() {
           </div>
         </section>
         <div className="workspace">
-          <aside className="profile-panel">
+          <aside className="profile-panel" ref={birthDetails}>
             <div className="section-label">
               01 <span>YOUR STARTING POINT</span>
             </div>
@@ -216,7 +260,7 @@ function App() {
                 </form>
                 <button
                   className="skip-button"
-                  onClick={() => composer.current?.focus()}
+                  onClick={() => { setPage("reflection"); composer.current?.focus(); }}
                 >
                   Just here to reflect? Start a conversation{" "}
                   <span aria-hidden="true">→</span>
@@ -330,28 +374,58 @@ function App() {
                 Explore my chart
               </button>
             </div>
+            {page === "chart" && (
+              <>
+                <div className="reading-controls">
+                  <label>Astrology lens
+                    <select value={method} onChange={(e) => setMethod(e.target.value as ReadingMethod)} disabled={!!busy}>
+                      {methods.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
+                    </select>
+                  </label>
+                  <label>Topic <span className="optional">optional</span>
+                    <select value={domain} onChange={(e) => setDomain(e.target.value as ReadingDomain | "")} disabled={!!busy}>
+                      <option value="">General reading (default)</option>
+                      {domains.map((value) => <option key={value} value={value}>{value.charAt(0).toUpperCase() + value.slice(1)}</option>)}
+                    </select>
+                  </label>
+                </div>
+                {chart && profile.birth_time_quality !== "exact" && (
+                  <p className="birth-time-warning" role="note">
+                    {profile.birth_time_quality === "unknown" ? "Birth time unknown." : "Birth time approximate."} Time-sensitive placements and timing may be unreliable. Each reading includes its calculation limits.
+                  </p>
+                )}
+                {!chart && ready && (
+                  <div className="calculate-first">
+                    <h2>Start with your chart</h2>
+                    <p>Add or update your birth details and calculate a chart before asking for a reading. Reflect is available without one.</p>
+                    <button className="text-button" onClick={() => {
+                      setEditing(true);
+                      birthDetails.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                    }}>Go to birth details →</button>
+                  </div>
+                )}
+              </>
+            )}
             <div
               className="conversation"
               aria-live="polite"
               aria-busy={busy === "chat"}
             >
-              {!history.length ? (
+              {!ready ? <p className="thinking" role="status">Opening your saved space…</p> : !history.length ? (
                 <div className="empty-conversation">
                   <div className="conversation-symbol" aria-hidden="true">
                     ✧
                   </div>
                   <h2>
-                    {profile.name
+                    {page === "chart" ? "What would you like to explore?" : profile.name
                       ? `What's on your mind, ${profile.name}?`
                       : "What’s on your mind?"}
                   </h2>
                   <p>
-                    A question. A feeling. Something you keep coming back to.
-                    <br />
-                    You do not need to have it all figured out.
+                    {page === "chart" ? "Ask a question, read the interpretation, and expand the calculation evidence behind it. You can follow up in this conversation." : <>A question. A feeling. Something you keep coming back to.<br />You do not need to have it all figured out.</>}
                   </p>
                   <div className="starters">
-                    {starters.map((text) => (
+                    {(page === "chart" ? chartStarters : starters).map((text) => (
                       <button
                         key={text}
                         onClick={() => {
@@ -367,8 +441,8 @@ function App() {
                 </div>
               ) : (
                 <div className="messages">
-                  {history.map((message, index) => (
-                    <article className={`message ${message.role}`} key={index}>
+                  {history.map((message) => (
+                    <article className={`message ${message.role}`} key={message.id}>
                       <span className="message-author">
                         {message.role === "user"
                           ? profile.name || "You"
@@ -383,6 +457,9 @@ function App() {
                           message.content
                         )}
                       </div>
+                      {message.role === "assistant" && message.evidence && <Evidence evidence={message.evidence} />}
+                      {message.role === "assistant" && page === "chart" && !message.evidence && <p className="fine-print">No calculation evidence was saved with this earlier response.</p>}
+                      {message.role === "assistant" && <button className="text-button follow-up" disabled={!!busy} onClick={() => composer.current?.focus()}>Ask a follow-up →</button>}
                     </article>
                   ))}
                 </div>
@@ -401,8 +478,10 @@ function App() {
             {error && (
               <div className="feedback error" role="alert">
                 {error}
+                {failedMessage && <button className="text-button feedback-action" onClick={retry} disabled={!!busy || !ready || (page === "chart" && !chart)}>Retry this question</button>}
               </div>
             )}
+            {(!ready || health === "Reconnecting…" || health === "Connection unavailable") && <button className="text-button feedback-action" onClick={reconnect}>Reconnect to saved space</button>}
             {notice && (
               <div className="feedback notice" role="status">
                 {notice}
@@ -417,10 +496,10 @@ function App() {
                 id="message"
                 value={draft}
                 onChange={(e) => setDraft(e.target.value)}
-                placeholder="Start wherever you are…"
+                placeholder={page === "chart" ? !chart ? "Calculate your chart to ask a question…" : "Ask about your chart, or follow up…" : "Start wherever you are…"}
                 rows={2}
                 maxLength={4000}
-                disabled={!!busy}
+                disabled={!ready || !!busy || (page === "chart" && !chart)}
                 onKeyDown={(e) => {
                   if (
                     e.key === "Enter" &&
@@ -428,7 +507,7 @@ function App() {
                     !e.nativeEvent.isComposing
                   ) {
                     e.preventDefault();
-                    if (draft.trim() && !busy)
+                    if (draft.trim() && !busy && ready && (page !== "chart" || chart))
                       e.currentTarget.form?.requestSubmit();
                   }
                 }}
@@ -436,13 +515,13 @@ function App() {
               <div className="composer-bottom">
                 <span>
                   {page === "chart"
-                    ? "A separate conversation with your chart companion"
+                    ? `${methods.find(([value]) => value === method)?.[1]} · ${domain || "general reading"}`
                     : "A conversation, at your pace"}
                 </span>
                 <button
                   type="submit"
                   aria-label="Send message"
-                  disabled={!ready || !!busy || !draft.trim()}
+                  disabled={!ready || !!busy || !draft.trim() || (page === "chart" && !chart)}
                 >
                   ↑
                 </button>

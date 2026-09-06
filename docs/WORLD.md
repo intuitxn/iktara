@@ -7,7 +7,7 @@ Iktara is a product world with places to act, personal context, and agents that 
 | Place      | Human intention                                        | Agent responsibility                                  | Service/data boundary                      |
 | ---------- | ------------------------------------------------------ | ----------------------------------------------------- | ------------------------------------------ |
 | Reflection | Think through a feeling, need, relationship, or choice | Warm, grounded conversation; preserve personal agency | Own workspace's profile and conversation   |
-| Chart      | Explore birth-chart symbolism                          | Explain supplied calculations; identify uncertainty   | Own computed chart from the Python service |
+| Chart      | Explore birth-chart symbolism                          | Explain supplied calculations; identify uncertainty   | Own chart and original-engine evidence through chart_evidence |
 
 The registered page/agent IDs and prompts live in `apps/local/server/worlds.ts` and `prompts.ts`; the OpenCode plugin installs them. A browser can select only a known page. It cannot supply a different agent, model, workspace owner, arbitrary tool, or system prompt.
 
@@ -29,7 +29,7 @@ The current no-signup identity is a random HttpOnly browser cookie. All data and
 
 Background jobs persist in the product database. Queued work can resume after restart. Work interrupted during inference is marked failed so the person can retry; the runtime does not silently repeat a potentially billed model request. Responses are written back to the requesting workspace. Product storage and deployment state stay outside immutable release directories.
 
-OpenCode sessions are short-lived execution contexts under the owning workspace, while the product database holds durable user-visible history. No coding tools or personal MCP integrations are exposed to these agents. A new service should declare its input, output, owner check, and permitted effects before a page agent can call it.
+OpenCode sessions are short-lived execution contexts under the owning workspace, while the product database holds durable user-visible history. The chart agent can invoke only chart_evidence, with no model-controlled arguments. It is scoped to an accepted job's owned chart/lens and revoked at session exit. No coding tools or personal MCP integrations are exposed to these agents. General subagent delegation and customer session sharing are not enabled; team workspace/session design is documented in TEAM-RUNTIME.md. A new service should declare its input, output, owner check, and permitted effects before a page agent can call it.
 
 ## Codex, OpenCode server, and ACP
 

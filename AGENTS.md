@@ -27,3 +27,11 @@ Iktara communication belongs only in Buzz channel `iktara` (`78fedf61-f8e2-43df-
 - Maintain this contract and the source map when the owner changes communication conventions. Follow the owner's current instruction over older forum guidance. Scope cleanup to exact authorized posts; preserve others' work and avoid deleting channels or identities.
 
 Read `project.json` and `docs/PROJECT.md` for the Buzz project, prior repository, engine source, and host update commands. Use `npm run project:context` for a revisioned source map and `npm run project:check` to verify it.
+
+## Private-reading milestone and shared team context
+
+Read docs/TEAM-RUNTIME.md, docs/EVIDENCE.md and the versioned PRD under docs/artifacts. One Buzz coordinator is agent-iktara; do not create a duplicate identity. Server hosting does not make customer sessions shared team context. Build agents may use scoped Buzz project searches and sanitized handoffs; freeze the exact source/artifact hashes in their task packet. Parallel workers operate on bounded file ownership and return candidate artifacts, never unreviewed production changes. Om's proposed tasks are drafts, not accepted assignments.
+
+The product's chart_evidence plugin tool has no model-controlled arguments and is bound to the accepted job's chart/question/lens. Reflection has no tools. Never enable a general shell, task-delegation or MCP tool for customer sessions. Run Python parity and adapter tests as well as the local app suite. Keep upstream engine code unchanged; inherited behavior is documented, not silently corrected.
+
+The generic Telepathy Desk watcher is distinct from the unconnected Buzz task workflow. Do not use its broad acceptance/auto-land path for Iktara. A team discussion or task approval cannot bypass exact-candidate GitHub review, CI and host verification.

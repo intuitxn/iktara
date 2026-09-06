@@ -31,6 +31,11 @@ jobs:
         working-directory: shastra-compute
       - run: npm ci
         working-directory: apps/local
+      - name: Verify pinned original engines and evidence adapter
+        run: |
+          .venv/bin/python -m unittest discover -s tests -p 'parity*.py' -v
+          .venv/bin/python -m unittest discover -s tests -p 'test*.py' -v
+        working-directory: shastra-compute
       - run: npm test
         working-directory: apps/local
       - run: npm run project:check

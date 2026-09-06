@@ -30,7 +30,7 @@ world registry (worlds.ts)
 └── page "chart"      ─ agent "iktara-chart" ─ prompt base + chart suffix
 ```
 
-Each world declares its page id, agent id, label, and prompt. The plugin sets a step limit of 2, denies all permissions, and installs each registry agent as primary. It also removes every agent not in the registry, removes all tools from product sessions, removes MCP servers, and rewrites session context to the page prompt with an empty tool set. A browser can select only a known page; it can never supply an agent, model, owner, tool, or system prompt. Profile and chart context are injected as untrusted data, never as capability tools. The runtime starts in an isolated OpenCode config directory, so no personal config, credentials, plugins, or sessions leak into the product.
+Each world declares its page id, agent id, label, and prompt. The plugin installs each registry agent as primary: reflection has 2 steps and no tools; chart has 4 steps and only the chart_evidence permission. It removes every non-registry agent, all built-in tools and MCP servers. The context hook exposes chart_evidence only to an active chart session with a server-owned job binding. A browser can select only a known page; it can never supply an agent, model, owner, tool, or system prompt. Profile/history are untrusted context. The no-argument chart_evidence tool invokes the original Python engine against the accepted job's immutable owned chart, method and topic; it caches one result per turn and is revoked on session exit or workspace clear. The worker stores the exact evidence alongside the answer and rejects missing or unknown evidence references. See docs/EVIDENCE.md. The runtime starts in an isolated OpenCode config directory, so no personal config, credentials, plugins, or sessions leak into the product.
 
 ## L2 — Agent profiles
 
@@ -60,7 +60,7 @@ The engine in this repository must stay identical to the prior version from the 
 
 - Parity check: `git fetch upstream && git diff upstream/main -- shastra-compute/src/engines shastra-compute/src/core packages/astro-core packages/astro_core` — expect no output. The `/engine-check` command runs this.
 - Active: chart calculation (`ChartCalculator`, Swiss Ephemeris) through `src/core/calculator.py` and the chart router mounted by `src/local_app.py`.
-- Preserved, not mounted: the Vedic/KP/Western/Compare reading-evidence pipeline under `src/engines/`. Do not describe the live product as having reading-engine parity until that integration is completed and reviewed.
+- Candidate integration: Vedic/KP/Western/Compare are mounted through `/v1/evidence/extract` and exposed by the chart_evidence plugin. Production remains a separately verified revision; do not describe a branch build as live. The pinned baseline and inherited limitations are in docs/ENGINE-PARITY.md.
 - A diff in `src/local_app.py` against upstream is expected (it is the local mounting file).
 
 ## Working with the runtime

@@ -1,17 +1,21 @@
 {
   "product": "Iktara",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "model": "opencode/deepseek-v4-flash",
   "runtime": "opencode-v2",
   "publicUrl": "https://forsee.life",
   "changes": [
-    "No-signup reflection and chart spaces with DeepSeek V4 Flash",
-    "Private browser workspaces and durable background replies",
-    "Reviewed main deployments with health checks and rollback"
+    "Original Vedic, KP, Western and Compare engines callable through a workspace-bound OpenCode v2 plugin",
+    "Private readings with saved calculation evidence, exact source references and explicit timing limitations",
+    "Reading lenses, expandable evidence, follow-up and reconnect/retry experience",
+    "Pinned upstream parity fixtures and reviewed artifact context for team agents"
   ],
   "decisionLinks": [],
   "limitations": [
-    "Original Vedic/KP/Western/Compare evidence pipeline is not connected in the deployed initial release",
-    "Shared live coding-session access and automatic CI-to-Buzz publication are not activated"
+    "Candidate release only until reviewed main, exact-SHA CI and active-host verification complete",
+    "Engine confidence is heuristic; astrology is not scientifically established prediction",
+    "Inherited KP computation-weekday rule and birth-period dasha are preserved, not current timing evidence",
+    "Reference checks verify supplied IDs, not semantic entailment of every model claim",
+    "Shared live coding-session access, general product-agent delegation, coordinator activation and automatic CI-to-Buzz publication are not activated"
   ]
 }

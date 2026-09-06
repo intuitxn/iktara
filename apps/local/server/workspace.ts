@@ -5,6 +5,7 @@ import { mkdirSync } from "node:fs";
 import path from "node:path";
 import type { ChatInput } from "./prompts.js";
 import type { WorldID } from "./worlds.js";
+import type { Domain, EvidenceBundle, Method } from "./evidence.js";
 
 export type Profile = {
   name: string;
@@ -26,6 +27,9 @@ export type Message = {
   content: string;
   createdAt: number;
   jobId: string;
+  evidence?: EvidenceBundle;
+  method?: Method;
+  domain?: Domain;
 };
 export type Job = {
   id: string;
@@ -35,6 +39,9 @@ export type Job = {
   updatedAt: number;
   text: string | null;
   error: string | null;
+  evidence?: EvidenceBundle;
+  method?: Method;
+  domain?: Domain;
 };
 export type ClaimedJob = Job & {
   owner: string;
@@ -93,6 +100,11 @@ export class WorkspaceStore {
         UNIQUE(job_id, role)
       );
       CREATE INDEX IF NOT EXISTS messages_owner_page ON messages(owner, page, created_at);
+      CREATE TABLE IF NOT EXISTS reading_jobs (
+        job_id TEXT PRIMARY KEY REFERENCES jobs(id) ON DELETE CASCADE,
+        owner TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
+        method TEXT NOT NULL, domain TEXT NOT NULL, evidence TEXT
+      );
     `);
   }
 
@@ -138,12 +150,12 @@ export class WorkspaceStore {
         .query<Message, [string]>(
           "SELECT id,page,role,content,created_at AS createdAt,job_id AS jobId FROM (SELECT *,rowid AS seq FROM messages WHERE owner=? ORDER BY created_at DESC,rowid DESC LIMIT 100) ORDER BY created_at ASC,seq ASC",
         )
-        .all(owner),
+        .all(owner).map(message => ({ ...message, ...this.reading(owner, message.jobId, message.role === "assistant") })),
       jobs: this.db
         .query<Job, [string]>(
           `SELECT ${jobColumns} FROM jobs WHERE owner=? ORDER BY created_at DESC LIMIT 30`,
         )
-        .all(owner),
+        .all(owner).map(job => ({ ...job, ...this.reading(owner, job.id) })),
     };
   }
 
@@ -178,11 +190,19 @@ export class WorkspaceStore {
   }
 
   getJob(owner: string, id: string): Job | null {
-    return this.db
+    const job = this.db
       .query<Job, [string, string]>(
         `SELECT ${jobColumns} FROM jobs WHERE owner=? AND id=?`,
       )
       .get(owner, id);
+    return job ? { ...job, ...this.reading(owner, id) } : null;
+  }
+
+  private reading(owner: string, id: string, includeEvidence = true) {
+    const row = this.db.query<{ method: Method; domain: Domain; evidence: string | null }, [string, string]>(
+      "SELECT method,domain,evidence FROM reading_jobs WHERE owner=? AND job_id=?",
+    ).get(owner, id);
+    return row ? { method: row.method, domain: row.domain, ...(includeEvidence && row.evidence ? { evidence: JSON.parse(row.evidence) as EvidenceBundle } : {}) } : {};
   }
 
   enqueue(
@@ -190,6 +210,8 @@ export class WorkspaceStore {
     page: WorldID,
     message: string,
     requestId: string,
+    method: Method = "compare",
+    domain: Domain = "general",
   ): Job {
     return this.db.transaction(() => {
       const existing = this.db
@@ -229,6 +251,8 @@ export class WorkspaceStore {
           "Iktara is busy. Please try again shortly.",
         );
       const current = this.workspace(owner);
+      if (page === "chart" && !current.chart)
+        throw new WorkspaceError(409, "Calculate your birth chart first, then ask your question.");
       const history = current.messages
         .filter((item) => item.page === page)
         .slice(-20)
@@ -242,6 +266,16 @@ export class WorkspaceStore {
         chart: current.chart?.chart,
         history,
         page,
+        method,
+        domain,
+        calculationInputs: current.profile ? {
+          date_of_birth: current.profile.date_of_birth,
+          time_of_birth: current.profile.time_of_birth,
+          birth_time_quality: current.profile.birth_time_quality,
+          latitude: current.chart?.latitude,
+          longitude: current.chart?.longitude,
+          timezone: current.chart?.timezone,
+        } : undefined,
       };
       const id = randomUUID();
       const now = Date.now();
@@ -250,6 +284,7 @@ export class WorkspaceStore {
           "INSERT INTO jobs(id,owner,page,request_id,status,input,created_at,updated_at) VALUES(?,?,?,?,'pending',?,?,?)",
         )
         .run(id, owner, page, requestId, JSON.stringify(input), now, now);
+      if (page === "chart") this.db.query("INSERT INTO reading_jobs(job_id,owner,method,domain) VALUES(?,?,?,?)").run(id, owner, method, domain);
       this.db
         .query(
           "INSERT INTO messages(id,owner,page,role,content,created_at,job_id) VALUES(?,?,?,'user',?,?,?)",
@@ -300,6 +335,8 @@ export class WorkspaceStore {
         )
         .run(text, now, job.id, job.owner, job.runToken);
       if (!result.changes) return; // Deleted/reset or superseded while the model ran.
+      if (job.input.evidence)
+        this.db.query("UPDATE reading_jobs SET evidence=? WHERE job_id=? AND owner=?").run(JSON.stringify(job.input.evidence), job.id, job.owner);
       this.db
         .query(
           "INSERT INTO messages(id,owner,page,role,content,created_at,job_id) VALUES(?,?,?,'assistant',?,?,?)",

@@ -5,6 +5,7 @@ import { tmpdir } from "node:os";
 import path from "node:path";
 import { WorkspaceStore, type Profile } from "./workspace.js";
 import { JobWorker } from "./jobs.js";
+import type { EvidenceBundle } from "./evidence.js";
 
 const profile: Profile = {
   name: "Synthetic A",
@@ -95,6 +96,7 @@ test("durable queue recovers pending jobs, fails interrupted inference, and dedu
       running.id,
     );
     store.claim();
+    store.saveProfile(owner, profile, { chart: { synthetic: true }, display_name: "Synthetic", timezone: "Asia/Kolkata" });
     const pending = store.enqueue(owner, "chart", "Second question", "second");
     store.close();
     store = new WorkspaceStore(filename);
@@ -105,7 +107,8 @@ test("durable queue recovers pending jobs, fails interrupted inference, and dedu
     const worker = new JobWorker(store, async (input, resolvedOwner) => {
       assert.equal(resolvedOwner, owner);
       calls.push(input.message);
-      return "Completed in the background";
+      input.evidence = { id: "reading-synthetic", schema_version: "iktara-evidence-v1", method: "compare", domain: "general", engine_revision: "fixture", chart_digest: "fixture", birth_time_quality: "unknown", items: [{ id: "E-0123456789abcdef", system: "western", kind: "pattern", detail: "Synthetic only" }], limitations: [] };
+      return "Completed in the background [E-0123456789abcdef]";
     });
     worker.wake();
     for (
@@ -122,7 +125,7 @@ test("durable queue recovers pending jobs, fails interrupted inference, and dedu
     );
     assert.equal(
       store.getJob(owner, pending.id)?.text,
-      "Completed in the background",
+      "Completed in the background [E-0123456789abcdef]",
     );
     assert.equal(
       store

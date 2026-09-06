@@ -4,6 +4,7 @@ import { fileURLToPath } from "node:url";
 import { conversationPrompt, type ChatInput } from "./prompts.js";
 import type { OpenCode } from "@opencode-ai/sdk";
 import { WORLDS } from "./worlds.js";
+import { agentToolSessions } from "./agent-tools.js";
 
 export const appRoot = fileURLToPath(new URL("../", import.meta.url));
 const runtimeRoot = path.resolve(
@@ -22,6 +23,7 @@ export function runtimeStatus() {
     configured,
     ready: Boolean(host && configured),
     version: "v2-beta",
+    model: model ?? null,
     ...(failed
       ? {
           reason:
@@ -81,7 +83,12 @@ export async function initializeRuntime(): Promise<OpenCode.Interface> {
           agents: Object.fromEntries(
             Object.values(WORLDS).map((world) => [
               world.agent,
-              { mode: "primary", steps: 2 },
+              { mode: "primary", steps: world.id === "chart" ? 4 : 2,
+                // The SDK can apply its config transform after our plugin.
+                // Per-agent rules must follow the global deny in that path too.
+                permissions: [{ action: "*", resource: "*", effect: "deny" },
+                  ...(world.id === "chart" ? [{ action: "chart_evidence", resource: "*", effect: "allow" }] : [])],
+              },
             ]),
           ),
           default_agent: "iktara",
@@ -134,8 +141,10 @@ export async function initializeRuntime(): Promise<OpenCode.Interface> {
 
 export async function chat(
   input: ChatInput,
-  options: { workspaceKey?: string } = {},
+  options: { workspaceKey?: string; evidence?: () => Promise<unknown> } = {},
 ): Promise<string> {
+  if (options.evidence && (!options.workspaceKey || input.page !== "chart"))
+    throw new Error("Evidence requires an owned chart session");
   const instance = await initializeRuntime();
   if (options.workspaceKey && !/^[0-9a-f-]{36}$/.test(options.workspaceKey))
     throw new Error("Invalid internal workspace identity");
@@ -158,7 +167,10 @@ export async function chat(
     },
     request,
   );
+  let unbind: (() => void) | undefined;
   try {
+    if (options.evidence)
+      unbind = agentToolSessions.bind(session.id, { owner: options.workspaceKey!, agent: "iktara-chart", evidence: options.evidence });
     await instance.sessions.prompt(
       { sessionID: session.id, text: conversationPrompt(input) },
       request,
@@ -181,6 +193,7 @@ export async function chat(
     if (!text) throw new Error("OpenCode returned an empty reply");
     return text;
   } finally {
+    unbind?.();
     await instance.sessions
       .interrupt({ sessionID: session.id })
       .catch(() => {});

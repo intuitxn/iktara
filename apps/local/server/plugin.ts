@@ -1,5 +1,6 @@
 import { Plugin } from "@opencode-ai/plugin";
 import { WORLDS } from "./worlds.js";
+import { registerAgentTools } from "./agent-tools.js";
 
 /** OpenCode v2 plugin: the product harness owns agents and available capabilities. */
 export default Plugin.define({
@@ -15,19 +16,17 @@ export default Plugin.define({
         agents.update(world.agent, (agent) => {
           agent.description = world.description;
           agent.system = world.prompt;
-          agent.steps = 2;
-          agent.permissions = [{ action: "*", resource: "*", effect: "deny" }];
+          agent.steps = world.id === "chart" ? 4 : 2;
+          agent.permissions = [{ action: "*", resource: "*", effect: "deny" },
+            ...(world.id === "chart" ? [{ action: "chart_evidence", resource: "*", effect: "allow" as const }] : [])];
         });
       agents.default("iktara");
     });
-    await ctx.tool.transform((tools) => {
-      for (const tool of tools.list()) tools.remove(tool.id);
-    });
+    await registerAgentTools(ctx);
     await ctx.mcp.transform((servers) => {
       for (const [name] of servers.list()) servers.remove(name);
     });
     await ctx.session.hook("context", (context) => {
-      context.tools = {};
       const world =
         Object.values(WORLDS).find(
           (item) => item.agent === String(context.agent),
