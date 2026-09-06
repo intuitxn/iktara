@@ -5,7 +5,11 @@
     "setup": "node scripts/setup.mjs",
     "dev": "node scripts/dev.mjs",
     "release:check": "node scripts/release-record.mjs check",
-    "release:notes": "node scripts/release-record.mjs"
+    "release:notes": "node scripts/release-record.mjs",
+    "project:context": "node scripts/project-context.mjs",
+    "project:check": "node scripts/project-context.mjs check",
+    "host:status": "node scripts/host.mjs status",
+    "host:update": "node scripts/host.mjs poll"
   },
   "packageManager": "pnpm@10.31.0",
   "dependencies": {

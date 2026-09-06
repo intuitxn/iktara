@@ -43,3 +43,7 @@ Reviewed main commits that pass CI are built and health-checked by the host's ba
 ## Team
 
 Iktara owns the product and its runtime. [Telepathy](https://github.com/intuitxn/telepathy) owns the team's communication workflow. Share reviewed product changes and decisions there; keep credentials, birth details, and private conversations out of git and Buzz updates.
+
+## Project context and host controls
+
+See [Iktara in Buzz](docs/PROJECT.md) and `project.json` for the builder agent, prior repository, and engine sources. `npm run project:context` produces the source map; `npm run host:status` shows the installed host revision; `npm run host:update` checks for CI-approved main immediately.

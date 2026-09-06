@@ -1,0 +1,49 @@
+{
+  "schemaVersion": 1,
+  "name": "Iktara",
+  "buzz": {
+    "project": "iktara",
+    "projectAddress": "30621:e43fcfd4d6505fab2deb4a9d4d1604b391af548c7995cc1c53321b7502b4d7e7:iktara",
+    "channel": "iktara"
+  },
+  "repositories": {
+    "product": "https://github.com/intuitxn/iktara",
+    "upstream": "https://github.com/Om2524/astropersonalised",
+    "team": "https://github.com/intuitxn/telepathy"
+  },
+  "builder": {
+    "id": "iktara-builder",
+    "definition": ".opencode/agents/iktara-builder.md",
+    "runtime": "contributor Codex or OpenCode; Telepathy Desk for accepted jobs"
+  },
+  "engine": {
+    "path": "shastra-compute/src/engines",
+    "entrypoint": "shastra-compute/src/local_app.py",
+    "systems": [
+      "vedic",
+      "kp",
+      "western",
+      "compare"
+    ],
+    "status": "Engine sources preserved; full evidence integration is separate ongoing work."
+  },
+  "context": [
+    "AGENTS.md",
+    "CONTRIBUTING.md",
+    "docs/PROJECT.md",
+    "docs/WORLD.md",
+    "docs/RELEASES.md",
+    "docs/prompts/contributor.md",
+    "apps/local/server/worlds.ts",
+    "apps/local/server/prompts.ts",
+    "apps/local/server/plugin.ts",
+    "ops/DEPLOYMENT.md"
+  ],
+  "workflow": {
+    "develop": "npm run dev",
+    "verify": "npm run project:check && npm --prefix apps/local test && npm --prefix apps/local run build",
+    "update": "npm run host:update",
+    "status": "npm run host:status",
+    "delivery": "reviewed main -> successful exact-SHA push CI -> host preparation -> health checks -> activation or rollback"
+  }
+}
