@@ -1,0 +1,172 @@
+import { mkdir } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { conversationPrompt, type ChatInput } from "./prompts.js";
+import type { OpenCode } from "@opencode-ai/sdk";
+
+export const appRoot = fileURLToPath(new URL("../", import.meta.url));
+const runtimeRoot = path.resolve(
+  process.env.IKTARA_RUNTIME_DIR || path.join(appRoot, ".runtime"),
+);
+const directory = path.join(runtimeRoot, "workspace");
+const model = process.env.OPENCODE_MODEL?.trim();
+const apiKey = process.env.OPENCODE_API_KEY?.trim();
+export const configured = Boolean(model && model.includes("/") && apiKey);
+let host: OpenCode.Interface | undefined;
+let starting: Promise<OpenCode.Interface> | undefined;
+let failed = false;
+
+export function runtimeStatus() {
+  return {
+    configured,
+    ready: Boolean(host && configured),
+    version: "v2-beta",
+    ...(failed
+      ? {
+          reason:
+            "The OpenCode runtime could not start. Check the local server log.",
+        }
+      : !configured
+        ? {
+            reason:
+              "Add OPENCODE_API_KEY and OPENCODE_MODEL to local server settings.",
+          }
+        : {}),
+  };
+}
+
+export async function initializeRuntime(): Promise<OpenCode.Interface> {
+  if (host) return host;
+  if (starting) return starting;
+  starting = (async () => {
+    await mkdir(runtimeRoot, { recursive: true, mode: 0o700 });
+    await mkdir(directory, { recursive: true, mode: 0o700 });
+    // These paths are set before importing the SDK: it never sees the personal
+    // OpenCode configuration, credentials, plugins, or session database.
+    for (const [name, folder] of Object.entries({
+      XDG_CONFIG_HOME: "config",
+      XDG_DATA_HOME: "data",
+      XDG_CACHE_HOME: "cache",
+      XDG_STATE_HOME: "state",
+    }))
+      process.env[name] = path.join(runtimeRoot, folder);
+    process.env.OPENCODE_CONFIG_DIR = path.join(
+      runtimeRoot,
+      "config",
+      "opencode",
+    );
+    // OpenCode also discovers ~/.claude and ~/.agents outside XDG config.
+    // Its supported test-home override scopes those lookups without changing HOME.
+    process.env.OPENCODE_TEST_HOME = path.join(runtimeRoot, "home");
+    delete process.env.OPENCODE_CONFIG;
+    delete process.env.OPENCODE_CONFIG_CONTENT;
+    const [{ OpenCode }, { default: plugin }] = await Promise.all([
+      import("@opencode-ai/sdk"),
+      import("./plugin.js"),
+    ]);
+    const instance = await OpenCode.create({
+      app: { name: "iktara", version: "0.1.0" },
+      database: { path: path.join(runtimeRoot, "iktara.sqlite") },
+      config: {
+        directory: process.env.OPENCODE_CONFIG_DIR,
+        project: false,
+        content: JSON.stringify({
+          share: "disabled",
+          update: "disable",
+          snapshots: false,
+          formatter: false,
+          lsp: false,
+          permissions: [{ action: "*", resource: "*", effect: "deny" }],
+          agents: { iktara: { mode: "primary", steps: 1 } },
+          default_agent: "iktara",
+          ...(model ? { model } : {}),
+        }),
+      },
+      fs: { filewatcher: false, fff: false },
+      plugins: [plugin],
+    });
+    try {
+      // V2 activates location plugins lazily on the first session, not on list().
+      const probe = await instance.sessions.create({
+        location: { directory },
+        agent: "iktara",
+        title: "Runtime startup check",
+      });
+      try {
+        await instance.plugin.awaitActivation({ location: { directory } });
+        const agents = await instance.agent.list({ location: { directory } });
+        if (agents.data.length !== 1 || agents.data[0]?.id !== "iktara")
+          throw new Error("Iktara plugin did not initialize");
+        if (configured)
+          await instance.integration.connect.key({
+            location: { directory },
+            integrationID:
+              process.env.OPENCODE_INTEGRATION || model!.split("/")[0]!,
+            key: apiKey!,
+          });
+      } finally {
+        await instance.sessions.remove({ sessionID: probe.id });
+      }
+      host = instance;
+      return instance;
+    } catch (error) {
+      await instance.close();
+      throw error;
+    }
+  })().catch((error) => {
+    failed = true;
+    starting = undefined;
+    throw error;
+  });
+  return starting;
+}
+
+export async function chat(input: ChatInput): Promise<string> {
+  const instance = await initializeRuntime();
+  const split = model!.indexOf("/");
+  const request = { signal: AbortSignal.timeout(90_000) };
+  const session = await instance.sessions.create(
+    {
+      location: { directory },
+      agent: "iktara",
+      title: "Iktara reflection",
+      model: {
+        providerID: model!.slice(0, split),
+        id: model!.slice(split + 1),
+      },
+    },
+    request,
+  );
+  try {
+    await instance.sessions.prompt(
+      { sessionID: session.id, text: conversationPrompt(input) },
+      request,
+    );
+    await instance.sessions.wait({ sessionID: session.id }, request);
+    const messages = await instance.sessions.context(
+      { sessionID: session.id },
+      request,
+    );
+    const last = messages
+      .filter((message) => message.type === "assistant")
+      .at(-1);
+    if (!last || last.error)
+      throw new Error("OpenCode did not produce a complete reply");
+    const text = last.content
+      .filter((part) => part.type === "text")
+      .map((part) => part.text)
+      .join("\n")
+      .trim();
+    if (!text) throw new Error("OpenCode returned an empty reply");
+    return text;
+  } finally {
+    await instance.sessions
+      .interrupt({ sessionID: session.id })
+      .catch(() => {});
+    await instance.sessions.remove({ sessionID: session.id }).catch(() => {});
+  }
+}
+
+export async function closeRuntime() {
+  if (host) await host.close();
+}

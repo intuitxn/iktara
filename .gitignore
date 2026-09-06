@@ -60,3 +60,6 @@ apps/web/.open-next/
 # Misc
 *.log
 *.pid
+
+# Local product runtime and private agent state
+apps/local/.runtime/

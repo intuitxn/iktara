@@ -1,102 +1,39 @@
-# Sudarshan (Shastra)
+# Iktara
 
-Personalized Vedic astrology AI — live at [forsee.life](https://forsee.life).
+A space for personal reflection, with astrology as an optional lens. An Intuitxn product, based on [Om's original application](https://github.com/Om2524/astropersonalised).
 
-## Architecture
+## Run on your machine
 
-```
-User → forsee.life (Next.js 16 on Cloudflare Pages)
-        ├── Convex Cloud (auth, database, rate limiting, subscriptions)
-        │   └── Actions → api.forsee.life (astrology compute + Gemini LLM)
-        ├── Cloudflare Worker (transactional + inbound email routing)
-        └── Streaming → HMAC-signed direct connection to api.forsee.life
-```
+Requires Node.js 22.22+, npm, and [uv](https://docs.astral.sh/uv/).
 
-| Layer | Stack | Runtime |
-|---|---|---|
-| **Frontend** | Next.js 16, React 19, Tailwind CSS 4, TypeScript | Cloudflare Pages (OpenNext) |
-| **Backend** | Convex (schema, auth, Polar subscriptions, rate limiting) | Convex Cloud |
-| **Compute** | FastAPI, Swiss Ephemeris, Google Gemini | Cloudflare Containers (Python 3.13) |
-| **Email** | Cloudflare Email Routing + Email Service Worker | Cloudflare Workers |
-
-## Project Structure
-
-```
-├── apps/web/              Next.js frontend
-├── apps/email-service/    Cloudflare Worker for outbound + inbound email
-├── convex/                Backend — schema, functions, actions, auth
-│   ├── functions/         Queries and mutations
-│   └── actions/           HTTP calls to shastra-compute
-├── shastra-compute/       Stateless Python API
-│   ├── src/engines/       Vedic, KP, Western, Compare astrology engines
-│   ├── src/services/      Query router, answer composer, brief, resonance
-│   └── Dockerfile
-└── scripts/               Release tooling
-```
-
-## Development
-
-### Prerequisites
-
-- Node.js 22+, pnpm 10+
-- Python 3.12+ (for shastra-compute local dev)
-- Docker (for compute container builds)
-
-### Frontend
-
-```bash
-cd apps/web
-pnpm install
-pnpm dev          # http://localhost:3000
-```
-
-### Shastra Compute (local)
-
-```bash
+```sh
 cd shastra-compute
-pip install -e .
-uvicorn src.main:app --reload --port 8000
+uv sync --frozen --python 3.12
+cd ../apps/local
+npm ci
+npm run build
+npm start
 ```
 
-## Deploying
-
-Tag-based deploys via GitHub Actions. Push a semver tag → all services deploy automatically → GitHub Release created.
-
-```bash
-./scripts/release.sh          # patch: v0.0.1 → v0.0.2
-./scripts/release.sh minor    # minor: v0.0.2 → v0.1.0
-./scripts/release.sh major    # major: v0.1.0 → v1.0.0
-```
-
-The latest tag is always the live deployment.
-
-## CI
-
-Every push to `main` and every PR runs checks:
-
-- **Frontend**: TypeScript type check + Next.js build
-- **Convex**: TypeScript type check on all functions
-- **Compute**: Docker build + container smoke test
+Open **http://127.0.0.1:3210**. No Google sign-in, email login, subscription, or Convex account is needed. Birth charts work without an AI key. Conversation requires the model configuration described in [the local app guide](apps/local/README.md).
 
 ## Services
 
-| Service | URL |
-|---|---|
-| Frontend | [forsee.life](https://forsee.life) |
-| Compute API | [api.forsee.life](https://api.forsee.life) |
-| Email Worker | `forsee-mail.<account>.workers.dev` |
-| Convex | `modest-mouse-216.convex.cloud` |
+| Piece | Responsibility |
+| --- | --- |
+| `apps/local/src` | React interface; birth profile, chart, and conversation saved in the browser |
+| `apps/local/server` | Product HTTP API, OpenCode v2 agent plugin, versioned prompts |
+| `shastra-compute/src/local_app.py` | Local chart-only Python service using Swiss Ephemeris |
+| `apps/local/scripts/start.mjs` | Starts and stops the local services together |
 
-## Email delivery
+The product API binds to loopback on port 3210; chart computation binds to loopback on 8001 with a per-run service key. OpenCode is an embedded runtime, not a public coding-agent endpoint. Its configuration/state are separate from the operator's personal harness. Model credentials stay on the server.
 
-Daily brief email delivery is scheduled from Convex and sent through the Cloudflare email worker in [apps/email-service](apps/email-service/README.md). Inbound routed mail can also be forwarded through the same worker once Email Routing is enabled in Cloudflare.
+The SDK/plugin development release is pinned; this is a local prototype, not a claim of a completed production migration. The existing `forsee.life` deployment is independent until its domain is connected to this host.
 
-Auth magic-link email is still wired to Resend inside [convex/auth.ts](convex/auth.ts). The new Cloudflare worker covers product email delivery and inbound routing without changing the sign-in flow yet.
+## Upstream application
 
-## Pricing
+`apps/web`, `convex`, `apps/email-service`, and the original Python reading routes preserve the earlier Cloudflare/Convex application for reference. They are not launched by the local product. Original tag deployment workflows are restricted to the upstream repository; the Intuitxn copy validates the local app instead.
 
-| Tier | Price | Queries/week |
-|---|---|---|
-| Maya | Free | 5 |
-| Dhyan | $100/mo | 50 |
-| Moksha | $1000/mo | 500 |
+## Team
+
+Iktara owns the product and its runtime. [Telepathy](https://github.com/intuitxn/telepathy) owns the team's communication workflow. Share reviewed product changes and decisions there; keep credentials, birth details, and private conversations out of git and Buzz updates.

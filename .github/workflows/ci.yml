@@ -13,6 +13,7 @@ concurrency:
 jobs:
   # ── Frontend Build ───────────────────────────────────────────
   frontend:
+    if: github.repository == 'Om2524/astropersonalised'
     name: Frontend (Build)
     runs-on: ubuntu-latest
     defaults:
@@ -52,6 +53,7 @@ jobs:
 
   # ── Convex Codegen ──────────────────────────────────────────
   convex:
+    if: github.repository == 'Om2524/astropersonalised'
     name: Convex (Codegen)
     runs-on: ubuntu-latest
     steps:
@@ -79,6 +81,7 @@ jobs:
 
   # ── Shastra Compute (Docker Build) ──────────────────────────
   compute:
+    if: github.repository == 'Om2524/astropersonalised'
     name: Compute (Docker Build)
     runs-on: ubuntu-latest
     steps:
