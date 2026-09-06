@@ -9,11 +9,10 @@ start a new thread only for a separate workstream.
 Use `/intuitxn` with the repository index and a concrete request:
 
 ```text
-/intuitxn repository:2
-Write the requested Iktara change. Describe the intended outcome, scope,
-and acceptance criteria here. Run relevant checks and return a candidate
-with verification evidence.
+/intuitxn {"repository":2,"request":"Describe the change and outcome","acceptance":"How to verify it"}
 ```
+
+`request` and `acceptance` are required fields.
 
 Repository indexes are `0` for telepathy, `1` for sansara, and `2` for iktara.
 Use `repository:2` for jobs in this repository.
