@@ -12,12 +12,8 @@ const securityHeaders = [
 ];
 
 const nextConfig: NextConfig = {
-  // Same-origin /api/* calls go to the local Iktara runtime (OpenCode server).
-  async rewrites() {
-    return [
-      { source: "/api/:path*", destination: "http://127.0.0.1:3211/api/:path*" },
-    ];
-  },
+  // The runtime serves /api/* itself on the public port and proxies all other
+  // paths to this app on the loopback web port; no rewrites are needed.
   async headers() {
     return [{ source: "/:path*", headers: securityHeaders }];
   },

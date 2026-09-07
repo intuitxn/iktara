@@ -8,9 +8,11 @@ import { fileURLToPath } from 'node:url';
 const repo = path.resolve(process.argv[2] || fileURLToPath(new URL('../', import.meta.url)));
 const runtime = await mkdtemp(path.join(tmpdir(), 'iktara-deploy-check-'));
 const port = Number(process.env.IKTARA_CHECK_PORT || 3212);
+const webPort = Number(process.env.IKTARA_CHECK_WEB_PORT || 3213);
 const computePort = Number(process.env.IKTARA_CHECK_COMPUTE_PORT || 8002);
-for (const value of [port, computePort]) if (!Number.isInteger(value) || value < 1024 || value > 65535) throw new Error('Invalid smoke-test port');
-const env = { ...process.env, PORT: String(port), COMPUTE_PORT: String(computePort), IKTARA_RUNTIME_DIR: runtime, IKTARA_ENV_FILE: path.join(runtime, 'no-model.env'), OPENCODE_MODEL: '', OPENCODE_API_KEY: '', OPENCODE_INTEGRATION: '' };
+for (const value of [port, webPort, computePort]) if (!Number.isInteger(value) || value < 1024 || value > 65535) throw new Error('Invalid smoke-test port');
+if (new Set([port, webPort, computePort]).size !== 3) throw new Error('Smoke-test ports must be distinct');
+const env = { ...process.env, PORT: String(port), WEB_PORT: String(webPort), COMPUTE_PORT: String(computePort), IKTARA_RUNTIME_DIR: runtime, IKTARA_ENV_FILE: path.join(runtime, 'no-model.env'), OPENCODE_MODEL: '', OPENCODE_API_KEY: '', OPENCODE_INTEGRATION: '' };
 for (const key of Object.keys(env)) if (/TOKEN|SECRET|PASSWORD|API_KEY|PRIVATE_KEY/.test(key)) delete env[key];
 env.OPENCODE_API_KEY = '';
 let child;
@@ -42,13 +44,13 @@ try {
     try {
       const response = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(1500) });
       const data = await response.json();
-      if (response.ok && data.ok && data.chart?.ready && data.opencode?.configured === false) { ready = true; break; }
+      if (response.ok && data.ok && data.chart?.ready && data.web?.ready && data.opencode?.configured === false) { ready = true; break; }
     } catch {}
     await new Promise(resolve => setTimeout(resolve, 500));
   }
   if (!ready) throw new Error('Candidate health checks failed');
   const page = await fetch(`http://127.0.0.1:${port}/`);
-  if (!page.ok || !(await page.text()).includes('Iktara')) throw new Error('Candidate UI did not load');
+  if (!page.ok || !/(iktara)/i.test(await page.text())) throw new Error('Candidate UI did not load');
   const workspace = await fetch(`http://127.0.0.1:${port}/api/workspace`);
   const cookie = workspace.headers.get('set-cookie')?.split(';')[0];
   if (!workspace.ok || !cookie?.startsWith('iktara_session=')) throw new Error('Anonymous workspace did not initialize');

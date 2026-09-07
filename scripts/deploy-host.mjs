@@ -39,9 +39,6 @@ function pnpmEnv() {
   const env = { ...cleanEnv };
   env.PATH = process.env.PATH || '/Users/a3fckxmini/.local/bin:/Users/a3fckxmini/.hermes/node/bin:/usr/bin:/bin:/usr/sbin:/sbin';
   env.COREPACK_HOME = process.env.COREPACK_HOME || path.join(homedir(), '.cache/node/corepack');
-  // Temporary until the UI team removes Convex from apps/web: prerendering
-  // evaluates ConvexReactClient, which needs any http(s) deployment address.
-  env.NEXT_PUBLIC_CONVEX_URL = process.env.NEXT_PUBLIC_CONVEX_URL || 'http://127.0.0.1:3211';
   return env;
 }
 async function loadState() { try { return JSON.parse(await readFile(stateFile, 'utf8')); } catch (error) { if (error.code === 'ENOENT') return {}; throw error; } }
@@ -159,7 +156,7 @@ async function health(port) {
   try {
     const response = await fetch(`http://127.0.0.1:${port}/api/health`, { signal: AbortSignal.timeout(2000) });
     const value = await response.json();
-    return response.ok && value.ok === true && value.chart?.ready === true && (!value.opencode?.configured || value.opencode.ready === true);
+    return response.ok && value.ok === true && value.chart?.ready === true && value.web?.ready === true && (!value.opencode?.configured || value.opencode.ready === true);
   } catch { return false; }
 }
 async function probe(url) {
@@ -173,7 +170,7 @@ async function serve() {
   const unlock = await lock('supervisor');
   let child, stopping = false, running;
   const port = Number(process.env.PORT || 3210);
-  const runtimePort = Number(process.env.RUNTIME_PORT || 3211);
+  const webPort = Number(process.env.WEB_PORT || 3211);
   const computePort = Number(process.env.COMPUTE_PORT || 8001);
   async function stopChild() {
     if (!child) return;
@@ -204,7 +201,7 @@ async function serve() {
         const directory = releasePath(selected);
         if (!await exists(path.join(directory, '.validated.json'))) throw new Error('Refusing unvalidated current release');
         log(`Starting ${selected.slice(0, 12)}`);
-        child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: path.join(directory, 'apps/local'), detached: true, stdio: 'inherit', env: { ...cleanEnv, PORT: String(port), RUNTIME_PORT: String(runtimePort), COMPUTE_PORT: String(computePort), IKTARA_ENV_FILE: path.join(shared, '.env.local'), IKTARA_RUNTIME_DIR: path.join(shared, 'runtime') } });
+        child = spawn(process.execPath, ['scripts/start.mjs'], { cwd: path.join(directory, 'apps/local'), detached: true, stdio: 'inherit', env: { ...cleanEnv, PORT: String(port), WEB_PORT: String(webPort), COMPUTE_PORT: String(computePort), IKTARA_ENV_FILE: path.join(shared, '.env.local'), IKTARA_RUNTIME_DIR: path.join(shared, 'runtime') } });
         child.on('error', () => log('Release process could not start'));
         let ready = false;
         for (let attempt = 0; attempt < 60 && !stopping; attempt++) {
@@ -218,7 +215,7 @@ async function serve() {
           ? state.active : state.previous !== selected ? state.previous : undefined;
         await atomicJson(stateFile, { ...state, active: selected, previous, activatedAt: new Date().toISOString() });
         running = selected;
-        log(`Healthy release ${selected.slice(0, 12)} active on ${port} (runtime ${runtimePort}, compute ${computePort})`);
+        log(`Healthy release ${selected.slice(0, 12)} active on ${port} (web ${webPort}, compute ${computePort})`);
       }
       await delay(5000);
       if (stopping || await currentSha() !== running) continue;
@@ -237,8 +234,8 @@ try {
   else if (mode === 'serve') await serve();
   else if (mode === 'status') {
     const port = Number(process.env.PORT || 3210);
-    const runtimePort = Number(process.env.RUNTIME_PORT || 3211);
-    console.log(JSON.stringify({ root, repository, current: await currentSha(), paused: await exists(path.join(root, 'paused')), services: { web: await probe(`http://127.0.0.1:${port}/`), api: await health(port), runtime: await health(runtimePort) }, ...await loadState() }, null, 2));
+    const webPort = Number(process.env.WEB_PORT || 3211);
+    console.log(JSON.stringify({ root, repository, current: await currentSha(), paused: await exists(path.join(root, 'paused')), services: { runtime: await health(port), web: await probe(`http://127.0.0.1:${webPort}/`) }, ...await loadState() }, null, 2));
   }
   else if (mode === 'pause') { await writeFile(path.join(root, 'paused'), 'Operator paused automatic deployments.\n', { mode: 0o600 }); log('Automatic deployments paused; current app keeps running'); }
   else if (mode === 'resume') { if (await exists(path.join(root, 'paused'))) await unlink(path.join(root, 'paused')); log('Automatic deployments resumed'); }

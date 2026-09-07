@@ -23,20 +23,20 @@ if (
 // Keep credentials in this process environment; never write generated keys to disk.
 const key = process.env.COMPUTE_API_KEY || randomBytes(32).toString("hex");
 const port = String(process.env.PORT || "3210");
-const runtimePort = String(process.env.RUNTIME_PORT || "3211");
+const webPort = String(process.env.WEB_PORT || "3211");
 const computePort = String(process.env.COMPUTE_PORT || "8001");
 const unprivileged = (value) =>
   /^\d+$/.test(value) && Number(value) >= 1024 && Number(value) <= 65535;
 for (const [name, value] of [
   ["PORT", port],
-  ["RUNTIME_PORT", runtimePort],
+  ["WEB_PORT", webPort],
   ["COMPUTE_PORT", computePort],
 ]) {
   if (!unprivileged(value))
     throw new Error(`${name} must be an unprivileged TCP port.`);
 }
-if (new Set([port, runtimePort, computePort]).size !== 3)
-  throw new Error("PORT, RUNTIME_PORT, and COMPUTE_PORT must be distinct.");
+if (new Set([port, webPort, computePort]).size !== 3)
+  throw new Error("PORT, WEB_PORT, and COMPUTE_PORT must be distinct.");
 const env = {
   ...process.env,
   COMPUTE_API_KEY: key,
@@ -93,21 +93,7 @@ for (let attempt = 0; attempt < 60 && !stopping; attempt++) {
 if (!healthy) {
   console.error("Chart service did not become ready.");
   stop(1);
-} else
-  launch(
-    resolve(root, "node_modules/bun/bin/bun.exe"),
-    ["server/index.ts"],
-    root,
-    {
-      ...env,
-      PORT: runtimePort,
-      // The runtime serves only the API behind the Next app now. Allow the
-      // Next-facing host on this loopback pair; an operator-provided
-      // IKTARA_PUBLIC_ORIGIN (e.g. https://forsee.life) still wins.
-      IKTARA_PUBLIC_ORIGIN:
-        process.env.IKTARA_PUBLIC_ORIGIN || `http://127.0.0.1:${port}`,
-    },
-  );
+}
 async function waitFor(url, label, attempts = 120) {
   for (let attempt = 0; attempt < attempts && !stopping; attempt++) {
     try {
@@ -121,41 +107,43 @@ async function waitFor(url, label, attempts = 120) {
   }
   return false;
 }
-if (!(await waitFor(`http://127.0.0.1:${runtimePort}/api/health`, "Runtime"))) {
+launch(
+  process.execPath,
+  [
+    "node_modules/next/dist/bin/next",
+    "start",
+    "-p",
+    webPort,
+    "--hostname",
+    "127.0.0.1",
+  ],
+  web,
+  { ...env, NODE_ENV: "production" },
+);
+if (!(await waitFor(`http://127.0.0.1:${webPort}/`, "Web"))) {
+  console.error("Web server did not become ready.");
+  stop(1);
+}
+launch(
+  resolve(root, "node_modules/bun/bin/bun.exe"),
+  ["server/index.ts"],
+  root,
+  {
+    ...env,
+    PORT: port,
+    // The runtime is the public entry: it serves /api/* and proxies pages to
+    // the Next app on WEB_PORT. An operator-provided IKTARA_PUBLIC_ORIGIN
+    // (e.g. https://forsee.life) still wins.
+    WEB_URL: `http://127.0.0.1:${webPort}`,
+    IKTARA_PUBLIC_ORIGIN:
+      process.env.IKTARA_PUBLIC_ORIGIN || `http://127.0.0.1:${port}`,
+  },
+);
+if (!(await waitFor(`http://127.0.0.1:${port}/api/health`, "Runtime"))) {
   console.error("Runtime did not become ready.");
   stop(1);
 } else {
-  launch(
-    process.execPath,
-    [
-      "node_modules/next/dist/bin/next",
-      "start",
-      "-p",
-      port,
-      "--hostname",
-      "127.0.0.1",
-    ],
-    web,
-    {
-      ...env,
-      NODE_ENV: "production",
-      // Temporary until the UI team removes Convex from apps/web: the client
-      // requires any http(s) address and pages are prerendered/SSR at boot.
-      NEXT_PUBLIC_CONVEX_URL:
-        process.env.NEXT_PUBLIC_CONVEX_URL || `http://127.0.0.1:${runtimePort}`,
-    },
+  console.log(
+    `Iktara ready on http://127.0.0.1:${port} (web ${webPort}, compute ${computePort})`,
   );
-  if (
-    !(await waitFor(
-      `http://127.0.0.1:${port}/api/health`,
-      "Web /api/health",
-    ))
-  ) {
-    console.error("Web server did not become ready.");
-    stop(1);
-  } else {
-    console.log(
-      `Iktara web listening at http://127.0.0.1:${port} (runtime ${runtimePort}, compute ${computePort})`,
-    );
-  }
 }
