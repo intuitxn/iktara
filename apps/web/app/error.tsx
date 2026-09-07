@@ -1,5 +1,7 @@
 "use client";
 
+import { Button } from "@/app/components/ui";
+
 export default function Error({
   error,
   reset,
@@ -9,11 +11,9 @@ export default function Error({
 }) {
   return (
     <section>
-      <h1 className="mb-2 text-2xl font-bold">Something went wrong</h1>
-      <p className="note mb-4">{error.message}</p>
-      <button className="btn" onClick={reset}>
-        Try again
-      </button>
+      <h1 className="page-title">Something went wrong</h1>
+      <p className="error">{error.message}</p>
+      <Button onClick={reset}>Try again</Button>
     </section>
   );
 }

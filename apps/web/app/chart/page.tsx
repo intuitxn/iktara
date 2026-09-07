@@ -1,12 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
-import {
-  runtimeApi,
-  type ChartResult,
-  type Profile,
-} from "@/app/lib/runtimeApi";
+import { runtimeApi, type ChartResult, type Profile } from "@/app/lib/runtimeApi";
+import { Button, Card, SectionTitle } from "@/app/components/ui";
 
 type PlanetRow = { name: string; sign: string; sign_degree: number };
 
@@ -35,70 +31,93 @@ export default function ChartPage() {
     try {
       setChart(await runtimeApi.computeChart(profile));
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Your chart could not be calculated.",
-      );
+      setError(failure instanceof Error ? failure.message : "Your chart could not be calculated.");
     } finally {
       setBusy(false);
     }
   }
 
-  const planets = (chart?.chart.tropical_planets as PlanetRow[] | undefined) ?? [];
+  const tropical = (chart?.chart.tropical_planets as PlanetRow[] | undefined) ?? [];
+  const sidereal = (chart?.chart.sidereal_planets as PlanetRow[] | undefined) ?? [];
 
-  if (!loaded) return <p className="note">Loading…</p>;
+  if (!loaded) return <p className="muted">Loading…</p>;
 
   if (!profile) {
     return (
       <section>
-        <h1 className="mb-2 text-2xl font-bold">Your chart</h1>
-        <p className="note mb-4">Add your birth details first.</p>
-        <Link href="/onboarding" className="btn btn-primary">
-          Go to onboarding
-        </Link>
+        <h1 className="page-title">Your chart</h1>
+        <Card>
+          <p className="muted">Add your birth details first.</p>
+          <Button href="/onboarding" variant="primary">
+            Go to onboarding
+          </Button>
+        </Card>
       </section>
     );
   }
 
   return (
     <section>
-      <h1 className="mb-2 text-2xl font-bold">Your chart</h1>
-      <p className="note mb-4">
-        {profile.name || "Birth details"}: {profile.date_of_birth} ·{" "}
-        {profile.time_of_birth || "time unknown"} · {profile.birthplace}
-      </p>
-      {error && <p className="error mb-4">{error}</p>}
-      {!chart ? (
-        <button className="btn btn-primary" onClick={compute} disabled={busy}>
-          {busy ? "Computing…" : "Compute chart"}
-        </button>
-      ) : (
-        <>
-          <div className="card">
-            <p className="font-semibold">{chart.display_name}</p>
-            <p className="note">Timezone: {chart.timezone}</p>
-          </div>
-          {planets.length > 0 && (
-            <div className="card">
-              <h2 className="mb-2 font-semibold">Planets (tropical)</h2>
-              <ul className="note">
-                {planets.map((planet) => (
-                  <li key={planet.name}>
-                    {planet.name}: {planet.sign} {planet.sign_degree?.toFixed(2)}°
-                  </li>
-                ))}
-              </ul>
-            </div>
+      <h1 className="page-title">Your chart</h1>
+      <div className="stack">
+        <Card>
+          <p className="card-meta">
+            <span>{profile.name || "Birth details"}</span>
+            <span>{profile.birth_time_quality}</span>
+          </p>
+          <p>
+            {profile.date_of_birth} · {profile.time_of_birth || "time unknown"} ·{" "}
+            {profile.birthplace}
+          </p>
+          {chart && <p className="muted">{chart.display_name} · {chart.timezone}</p>}
+          {!chart && (
+            <Button onClick={compute} disabled={busy}>
+              {busy ? "Calculating…" : "Calculate chart"}
+            </Button>
           )}
-          <details className="card">
-            <summary className="cursor-pointer font-semibold">Raw chart data</summary>
-            <pre className="mt-3 overflow-x-auto text-xs">
-              {JSON.stringify(chart, null, 2)}
-            </pre>
+        </Card>
+        {error && <p className="error">{error}</p>}
+        {chart && (
+          <Card>
+            <SectionTitle>Planets — tropical</SectionTitle>
+            {tropical.length > 0 ? (
+              <div className="planets-grid">
+                {tropical.map((planet) => (
+                  <div className="planet-card" key={planet.name}>
+                    <p className="planet-name">{planet.name}</p>
+                    <p className="planet-value">
+                      {planet.sign} {planet.sign_degree?.toFixed(2)}°
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No tropical planets returned.</p>
+            )}
+            <SectionTitle>Planets — sidereal</SectionTitle>
+            {sidereal.length > 0 ? (
+              <div className="planets-grid">
+                {sidereal.map((planet) => (
+                  <div className="planet-card" key={planet.name}>
+                    <p className="planet-name">{planet.name}</p>
+                    <p className="planet-value">
+                      {planet.sign} {planet.sign_degree?.toFixed(2)}°
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <p className="muted">No sidereal planets returned.</p>
+            )}
+          </Card>
+        )}
+        {chart && (
+          <details className="data">
+            <summary>Raw chart data</summary>
+            <pre className="data">{JSON.stringify(chart, null, 2)}</pre>
           </details>
-        </>
-      )}
+        )}
+      </div>
     </section>
   );
 }

@@ -1,26 +1,44 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import { useRouter } from "next/navigation";
 import {
   EMPTY_PROFILE,
-  normalizeProfile,
   runtimeApi,
   type Profile,
 } from "@/app/lib/runtimeApi";
+import { Button, Card, Field, Select } from "@/app/components/ui";
+
+const QUALITY_OPTIONS = [
+  { value: "exact", label: "I know the exact time" },
+  { value: "approximate", label: "It is approximate" },
+  { value: "unknown", label: "I do not know my birth time" },
+];
 
 export default function OnboardingPage() {
-  const router = useRouter();
-  const [profile, setProfile] = useState<Profile>(EMPTY_PROFILE);
+  const [name, setName] = useState("");
+  const [dob, setDob] = useState("");
+  const [tob, setTob] = useState("");
+  const [unknownTime, setUnknownTime] = useState(false);
+  const [quality, setQuality] = useState("exact");
+  const [birthplace, setBirthplace] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
     runtimeApi
       .workspace()
       .then((data) => {
-        if (data.profile) setProfile({ ...EMPTY_PROFILE, ...data.profile });
+        if (!data.profile) return;
+        setName(data.profile.name);
+        setDob(data.profile.date_of_birth);
+        setTob(data.profile.time_of_birth || "");
+        setUnknownTime(data.profile.birth_time_quality === "unknown");
+        if (data.profile.birth_time_quality !== "unknown") {
+          setQuality(data.profile.birth_time_quality);
+        }
+        setBirthplace(data.profile.birthplace);
       })
       .catch(() => {
         // The runtime may be offline; the form still loads for editing.
@@ -28,101 +46,96 @@ export default function OnboardingPage() {
       .finally(() => setLoaded(true));
   }, []);
 
-  const update = (key: keyof Profile, value: string) =>
-    setProfile((previous) => ({ ...previous, [key]: value }));
-
   async function submit(event: FormEvent) {
     event.preventDefault();
     if (busy) return;
-    if (!profile.date_of_birth || !profile.birthplace.trim()) return;
-    if (profile.birth_time_quality !== "unknown" && !profile.time_of_birth) {
-      setError("Add a birth time or mark it as unknown.");
+    if (!dob || !birthplace.trim()) return;
+    if (!unknownTime && !tob) {
+      setError("Add a birth time or tick “unknown”.");
       return;
     }
     setBusy(true);
     setError("");
+    const profile: Profile = {
+      ...EMPTY_PROFILE,
+      name,
+      date_of_birth: dob,
+      time_of_birth: unknownTime ? null : tob,
+      birthplace,
+      birth_time_quality: unknownTime ? "unknown" : (quality as Profile["birth_time_quality"]),
+    };
     try {
-      await runtimeApi.saveProfile(normalizeProfile(profile));
-      router.push("/chart");
+      await runtimeApi.saveProfile(profile);
+      setSaved(true);
     } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Could not save your birth details.",
-      );
+      setError(failure instanceof Error ? failure.message : "Could not save your birth details.");
+    } finally {
       setBusy(false);
     }
   }
 
+  if (saved) {
+    return (
+      <section>
+        <h1 className="page-title">Your birth details</h1>
+        <Card>
+          <p>Saved. Your details are ready for the chart.</p>
+          <div className="row">
+            <Button href="/chart" variant="primary">
+              Continue to your chart
+            </Button>
+            <Button href="/chat" variant="ghost">
+              Go to chat
+            </Button>
+          </div>
+        </Card>
+      </section>
+    );
+  }
+
   return (
     <section>
-      <h1 className="mb-2 text-2xl font-bold">Your birth details</h1>
-      <p className="note mb-6">
-        No account needed. Your details stay in this private session.
-      </p>
-      <form onSubmit={submit} className="card max-w-md">
-        <div className="field">
-          <label htmlFor="name">Name (optional)</label>
-          <input
-            id="name"
-            value={profile.name}
-            maxLength={80}
-            onChange={(e) => update("name", e.target.value)}
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="dob">Birth date</label>
-          <input
-            id="dob"
-            type="date"
-            required
-            value={profile.date_of_birth}
-            onChange={(e) => update("date_of_birth", e.target.value)}
-            disabled={busy}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="tob">Birth time</label>
-          <input
-            id="tob"
-            type="time"
-            value={profile.time_of_birth || ""}
-            required={profile.birth_time_quality !== "unknown"}
-            disabled={busy || profile.birth_time_quality === "unknown"}
-            onChange={(e) => update("time_of_birth", e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label htmlFor="quality">How certain is the time?</label>
-          <select
-            id="quality"
-            value={profile.birth_time_quality}
-            onChange={(e) => update("birth_time_quality", e.target.value)}
-            disabled={busy}
-          >
-            <option value="exact">I know the exact time</option>
-            <option value="approximate">It is approximate</option>
-            <option value="unknown">I do not know my birth time</option>
-          </select>
-        </div>
-        <div className="field">
-          <label htmlFor="place">Birthplace</label>
-          <input
-            id="place"
-            required
-            value={profile.birthplace}
-            placeholder="City, country"
-            maxLength={200}
-            onChange={(e) => update("birthplace", e.target.value)}
-            disabled={busy}
-          />
-        </div>
-        {error && <p className="error mb-4">{error}</p>}
-        <button type="submit" className="btn btn-primary" disabled={busy || !loaded}>
-          {busy ? "Saving…" : "Save and continue"}
-        </button>
-      </form>
+      <h1 className="page-title">Your birth details</h1>
+      <p className="muted">No account needed. Your details stay in this private session.</p>
+      <Card>
+        <form onSubmit={submit}>
+          <Field label="Name (optional)" htmlFor="name">
+            <input id="name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} disabled={busy} />
+          </Field>
+          <Field label="Birth date" htmlFor="dob">
+            <input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} disabled={busy} />
+          </Field>
+          <Field label="Birth time" htmlFor="tob">
+            <input id="tob" type="time" value={tob} disabled={busy || unknownTime} onChange={(e) => setTob(e.target.value)} />
+            <label className="check-row">
+              <input type="checkbox" checked={unknownTime} disabled={busy} onChange={(e) => setUnknownTime(e.target.checked)} />
+              I don&apos;t know my birth time
+            </label>
+          </Field>
+          <Field label="How certain is the time?" htmlFor="quality">
+            <Select
+              id="quality"
+              value={unknownTime ? "unknown" : quality}
+              disabled={busy}
+              onChange={(value) => {
+                if (value === "unknown") setUnknownTime(true);
+                else {
+                  setUnknownTime(false);
+                  setQuality(value);
+                }
+              }}
+              options={QUALITY_OPTIONS}
+            />
+          </Field>
+          <Field label="Birthplace" htmlFor="place">
+            <input id="place" required value={birthplace} placeholder="City, country" maxLength={200} onChange={(e) => setBirthplace(e.target.value)} disabled={busy} />
+          </Field>
+          {error && <p className="error">{error}</p>}
+          <Button type="submit" disabled={busy || !loaded}>
+            {busy ? "Saving…" : "Save details"}
+          </Button>
+        </form>
+      </Card>
     </section>
   );
 }
