@@ -1,6 +1,6 @@
 # Local Iktara
 
-From the repository root, run `npm run setup`, then `npm run dev`. The contributor instance is **http://127.0.0.1:3220**, separate from deployed port 3210. See [CONTRIBUTING](../../CONTRIBUTING.md).
+From the repository root, run `npm run setup`, then build the Next frontend once with `cd apps/web && corepack pnpm install && corepack pnpm build`, then `npm run dev`. The contributor instance is **http://127.0.0.1:3220**, separate from deployed port 3210. `npm run dev` boots three services: the Next app on port 3220, this runtime on 3211, and the chart service on 8020; do not run it on the same machine as a deployed host. See [CONTRIBUTING](../../CONTRIBUTING.md).
 
 ## Model setup
 
@@ -13,7 +13,7 @@ OPENCODE_API_KEY=your-opencode-zen-key
 
 DeepSeek V4 Flash is the selected model. Restart after configuration changes. Keep the file mode 600 and never add a `VITE_` prefix to a secret. The server registers the key with its isolated OpenCode integration; it never reaches the browser bundle.
 
-The deployed instance reads private `shared/.env.local` and stores databases under `shared/runtime` outside release directories. The development instance has its own `.runtime-dev`. The direct `npm start` command uses port 3210 and `.runtime`; do not run it alongside the deployed host. The launcher supports `IKTARA_ENV_FILE`, `IKTARA_RUNTIME_DIR`, `PORT`, and `COMPUTE_PORT`.
+The deployed instance reads private `shared/.env.local` and stores databases under `shared/runtime` outside release directories. The development instance has its own `.runtime-dev`. `npm start` launches all three services: the Next app on `PORT` (default 3210), this runtime on `RUNTIME_PORT` (default 3211, loopback), and the chart service on `COMPUTE_PORT` (default 8001, loopback); do not run it alongside the deployed host. The launcher supports `IKTARA_ENV_FILE`, `IKTARA_RUNTIME_DIR`, `PORT`, `RUNTIME_PORT`, and `COMPUTE_PORT`. The web app's `/api/*` rewrite targets port 3211 and is baked at build time, so keep `RUNTIME_PORT` at 3211 (override only for emergencies, together with a rebuilt web app that targets the same port).
 
 ## World and runtime
 
@@ -23,7 +23,7 @@ The deployed instance reads private `shared/.env.local` and stores databases und
 - `server/workspace.ts`: owner-filtered SQLite profile, chart, history, and job storage.
 - `server/jobs.ts`: background worker; accepted requests survive browser disconnection.
 - `server/runtime.ts`: embedded OpenCode, per-owner execution directories, short-lived inference sessions.
-- `server/index.ts`: HTTP API and static UI.
+- `server/index.ts`: HTTP API (loopback behind the Next app's `/api/*` rewrite).
 
 SDK/plugin are pinned to `0.0.0-dev-19191`, with project-local Bun 1.4.2. This is the newer [OpenCode v2 SDK](https://opencode.ai/v2/docs/build/sdk), not the older v1 SDK's `/v2` client. Reflection uses 2 steps and no tools. Chart uses 4 steps and only the no-argument chart_evidence capability; the model must call it before answering. Every call is bound to the accepted job's private context, cached per turn and revoked on session exit.
 
@@ -41,6 +41,6 @@ Birthplace is sent to Nominatim for geocoding. Messages and relevant profile/cha
 
 [Deployment operations](../../ops/DEPLOYMENT.md) cover the CI watcher, isolated releases, restart, rollback, and private state. The Mac must be awake and logged in. A named Cloudflare tunnel must target port 3210, with `IKTARA_PUBLIC_ORIGIN` set to its HTTPS origin, before the public domain can use this runtime.
 
-`npm test` exercises actual v2 agent/capability initialization, owner isolation, durable queue recovery, and HTTP boundaries. `npm run build` checks types and bundles the UI. CI also boots both services and checks real chart calculations without a model key. Real DeepSeek inference is verified separately; it is not billed on every build.
+`npm test` exercises actual v2 agent/capability initialization, owner isolation, durable queue recovery, and HTTP boundaries. `npm run build` checks types and bundles the static UI. CI also builds apps/web and boots all three services (Next app, runtime, chart service) and checks real chart calculations without a model key. Real DeepSeek inference is verified separately; it is not billed on every build.
 
 This remains an early product: public abuse/spending controls, cross-device identity, retention policy, backups, and external-domain verification need explicit operational decisions. The pinned SDK has a moderate transitive OpenTelemetry advisory; no incompatible automatic downgrade was applied.
