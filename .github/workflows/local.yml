@@ -45,6 +45,18 @@ jobs:
           node --test scripts/release-record.test.mjs
       - run: npm run build
         working-directory: apps/local
+      # apps/web builds with pnpm (version pinned in apps/web packageManager).
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.31.0
+      - run: pnpm install --frozen-lockfile
+        working-directory: apps/web
+      - run: pnpm build
+        working-directory: apps/web
+        env:
+          # Temporary until the UI team removes Convex from apps/web:
+          # prerendering evaluates ConvexReactClient, which needs an address.
+          NEXT_PUBLIC_CONVEX_URL: http://127.0.0.1:3211
       - name: Boot services and verify real chart calculation
         run: node scripts/deploy-smoke.mjs .
       - name: Check host entry point

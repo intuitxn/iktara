@@ -8,23 +8,35 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const envFile = process.env.IKTARA_ENV_FILE || resolve(root, ".env.local");
 if (existsSync(envFile)) process.loadEnvFile(envFile);
 const compute = resolve(root, "../../shastra-compute");
+const web = resolve(root, "../web");
 const python = resolve(compute, ".venv/bin/python");
-if (!existsSync(python) || !existsSync(resolve(root, "dist/index.html"))) {
+if (
+  !existsSync(python) ||
+  !existsSync(resolve(root, "dist/index.html")) ||
+  !existsSync(resolve(web, ".next/BUILD_ID"))
+) {
   console.error(
-    "Run uv sync --python 3.12 in shastra-compute, then npm install && npm run build in apps/local.",
+    "Run uv sync --python 3.12 in shastra-compute, npm install && npm run build in apps/local, and corepack pnpm install && corepack pnpm build in apps/web.",
   );
   process.exit(1);
 }
 // Keep credentials in this process environment; never write generated keys to disk.
 const key = process.env.COMPUTE_API_KEY || randomBytes(32).toString("hex");
-const computePort = process.env.COMPUTE_PORT || "8001";
-if (
-  !/^\d+$/.test(computePort) ||
-  Number(computePort) < 1024 ||
-  Number(computePort) > 65535
-) {
-  throw new Error("COMPUTE_PORT must be an unprivileged TCP port.");
+const port = String(process.env.PORT || "3210");
+const runtimePort = String(process.env.RUNTIME_PORT || "3211");
+const computePort = String(process.env.COMPUTE_PORT || "8001");
+const unprivileged = (value) =>
+  /^\d+$/.test(value) && Number(value) >= 1024 && Number(value) <= 65535;
+for (const [name, value] of [
+  ["PORT", port],
+  ["RUNTIME_PORT", runtimePort],
+  ["COMPUTE_PORT", computePort],
+]) {
+  if (!unprivileged(value))
+    throw new Error(`${name} must be an unprivileged TCP port.`);
 }
+if (new Set([port, runtimePort, computePort]).size !== 3)
+  throw new Error("PORT, RUNTIME_PORT, and COMPUTE_PORT must be distinct.");
 const env = {
   ...process.env,
   COMPUTE_API_KEY: key,
@@ -86,5 +98,64 @@ if (!healthy) {
     resolve(root, "node_modules/bun/bin/bun.exe"),
     ["server/index.ts"],
     root,
-    env,
+    {
+      ...env,
+      PORT: runtimePort,
+      // The runtime serves only the API behind the Next app now. Allow the
+      // Next-facing host on this loopback pair; an operator-provided
+      // IKTARA_PUBLIC_ORIGIN (e.g. https://forsee.life) still wins.
+      IKTARA_PUBLIC_ORIGIN:
+        process.env.IKTARA_PUBLIC_ORIGIN || `http://127.0.0.1:${port}`,
+    },
   );
+async function waitFor(url, label, attempts = 120) {
+  for (let attempt = 0; attempt < attempts && !stopping; attempt++) {
+    try {
+      const response = await fetch(url, { signal: AbortSignal.timeout(2000) });
+      if (response.ok) {
+        console.log(`${label} ready (${url})`);
+        return true;
+      }
+    } catch {}
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+  return false;
+}
+if (!(await waitFor(`http://127.0.0.1:${runtimePort}/api/health`, "Runtime"))) {
+  console.error("Runtime did not become ready.");
+  stop(1);
+} else {
+  launch(
+    process.execPath,
+    [
+      "node_modules/next/dist/bin/next",
+      "start",
+      "-p",
+      port,
+      "--hostname",
+      "127.0.0.1",
+    ],
+    web,
+    {
+      ...env,
+      NODE_ENV: "production",
+      // Temporary until the UI team removes Convex from apps/web: the client
+      // requires any http(s) address and pages are prerendered/SSR at boot.
+      NEXT_PUBLIC_CONVEX_URL:
+        process.env.NEXT_PUBLIC_CONVEX_URL || `http://127.0.0.1:${runtimePort}`,
+    },
+  );
+  if (
+    !(await waitFor(
+      `http://127.0.0.1:${port}/api/health`,
+      "Web /api/health",
+    ))
+  ) {
+    console.error("Web server did not become ready.");
+    stop(1);
+  } else {
+    console.log(
+      `Iktara web listening at http://127.0.0.1:${port} (runtime ${runtimePort}, compute ${computePort})`,
+    );
+  }
+}
