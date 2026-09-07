@@ -1,30 +1,39 @@
 import type { Metadata } from "next";
-import { Source_Serif_4 } from "next/font/google";
+import Link from "next/link";
 import "./globals.css";
-import { ConvexClientProvider } from "@/app/ConvexClientProvider";
-import { AppProvider } from "@/app/store";
-import { PostHogProvider } from "@/app/providers/posthog";
-
-const sourceSerif = Source_Serif_4({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "iktara — Personalized Astrology AI",
-  description: "Personalized astrology insights powered by AI",
+  title: "iktara",
+  description: "Personalized astrology readings from your birth chart.",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+const NAV = [
+  { href: "/", label: "Home" },
+  { href: "/onboarding", label: "Onboarding" },
+  { href: "/chart", label: "Chart" },
+  { href: "/chat", label: "Chat" },
+  { href: "/saved", label: "Saved" },
+];
+
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className={sourceSerif.className}>
-        <PostHogProvider>
-          <ConvexClientProvider>
-            <AppProvider>{children}</AppProvider>
-          </ConvexClientProvider>
-        </PostHogProvider>
+      <body>
+        <header className="border-b border-[#e4ded0] bg-white">
+          <div className="mx-auto flex max-w-3xl items-center gap-6 px-4 py-3">
+            <Link href="/" className="text-lg font-bold tracking-tight">
+              iktara
+            </Link>
+            <nav className="flex gap-4 text-sm">
+              {NAV.map((item) => (
+                <Link key={item.href} href={item.href} className="hover:underline">
+                  {item.label}
+                </Link>
+              ))}
+            </nav>
+          </div>
+        </header>
+        <main>{children}</main>
       </body>
     </html>
   );

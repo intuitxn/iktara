@@ -1,47 +1,25 @@
-import path from "path";
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-  output: "standalone",
-  transpilePackages: ["convex", "@convex-dev/auth", "@convex-dev/polar"],
-  typescript: {
-    ignoreBuildErrors: true,
+const securityHeaders = [
+  {
+    key: "Content-Security-Policy",
+    value:
+      "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'",
   },
-  webpack: (config, { isServer }) => {
-    if (isServer) {
-      // Force convex to use native WebSocket instead of ws library.
-      // The convex package's "node" export condition pulls in ws@8.18.0,
-      // which uses createRequire("https") at runtime — a dynamic require
-      // that bypasses all build-time patches. Cloudflare Workers provide
-      // native WebSocket, so ws is unnecessary.
-      const convexEsmBrowser = path.join(
-        process.cwd(),
-        "node_modules/convex/dist/esm/browser"
-      );
-      config.resolve.alias = {
-        ...config.resolve.alias,
-        [path.join(convexEsmBrowser, "index-node.js")]: path.join(
-          convexEsmBrowser,
-          "index.js"
-        ),
-        [path.join(convexEsmBrowser, "simple_client-node.js")]: path.join(
-          convexEsmBrowser,
-          "simple_client.js"
-        ),
-      };
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "same-origin" },
+  { key: "X-Frame-Options", value: "DENY" },
+];
 
-      // Intercept any remaining static https requires at the externals level.
-      const prevExternals = config.externals;
-      config.externals = [
-        async ({ request }: { request: string }) => {
-          if (request === "https" || request === "node:https") {
-            return "commonjs http";
-          }
-        },
-        ...(Array.isArray(prevExternals) ? prevExternals : [prevExternals]),
-      ];
-    }
-    return config;
+const nextConfig: NextConfig = {
+  // Same-origin /api/* calls go to the local Iktara runtime (OpenCode server).
+  async rewrites() {
+    return [
+      { source: "/api/:path*", destination: "http://127.0.0.1:3211/api/:path*" },
+    ];
+  },
+  async headers() {
+    return [{ source: "/:path*", headers: securityHeaders }];
   },
 };
 
