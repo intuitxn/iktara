@@ -25,12 +25,6 @@
     "paths": {
       "@/*": [
         "./*"
-      ],
-      "@convex/*": [
-        "./convex/*"
-      ],
-      "convex/*": [
-        "./node_modules/convex/*"
       ]
     }
   },

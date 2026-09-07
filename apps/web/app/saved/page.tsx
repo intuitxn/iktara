@@ -1,194 +1,83 @@
 "use client";
 
-import { useState } from "react";
-import { useQuery, useMutation } from "convex/react";
-import { api } from "@convex/_generated/api";
-import { useApp } from "@/app/store";
-import { useSubscription } from "@/app/hooks/useSubscription";
-import { Bookmark, BookmarkX, Loader2, Lock } from "lucide-react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import type { Id } from "@convex/_generated/dataModel";
-import AuthWall from "@/app/components/AuthWall";
+import { runtimeApi, type Message } from "@/app/lib/runtimeApi";
 
-export default function SavedReadingsPage() {
-  const { sessionId } = useApp();
-  const currentUser = useQuery(api.functions.users.getCurrentUser, {});
-  const subscription = useSubscription(sessionId, currentUser?._id);
-  const toggleSave = useMutation(api.functions.readings.toggleSave);
+export default function SavedPage() {
+  const [messages, setMessages] = useState<Message[]>([]);
+  const [loaded, setLoaded] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
-  const [togglingId, setTogglingId] = useState<string | null>(null);
-  const [showAuth, setShowAuth] = useState(false);
+  useEffect(() => {
+    runtimeApi
+      .workspace()
+      .then((data) => setMessages(data.messages))
+      .catch((failure) =>
+        setError(
+          failure instanceof Error
+            ? failure.message
+            : "Could not load saved messages.",
+        ),
+      )
+      .finally(() => setLoaded(true));
+  }, []);
 
-  const readings = useQuery(
-    api.functions.readings.listSaved,
-    currentUser?._id ? { userId: currentUser._id } : "skip"
-  );
-
-  const savedReadings = readings ?? [];
-
-  if (currentUser === undefined || subscription.loading) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center p-4">
-        <div className="flex w-full max-w-2xl flex-col items-center gap-4 glass-section p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-accent" />
-          <p className="text-sm text-text-secondary">Loading your account...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Check if user is authenticated
-  if (!currentUser || !subscription.isAuthenticated) {
-    return (
-      <div className="flex min-h-dvh items-center justify-center p-4">
-        <div className="max-w-md glass-section p-8 text-center">
-          <Lock className="mx-auto h-12 w-12 text-text-secondary/30 mb-4" />
-          <h2 className="mb-2 text-xl font-semibold text-text-primary">
-            Saved Readings
-          </h2>
-          <p className="mb-6 text-sm text-text-secondary">
-            Sign in to save and access your bookmarked readings.
-          </p>
-          <button
-            onClick={() => setShowAuth(true)}
-            className="inline-block rounded-xl bg-accent px-6 py-2.5 text-sm font-medium text-white hover:brightness-110"
-          >
-            Sign In
-          </button>
-        </div>
-        <AuthWall
-          isOpen={showAuth}
-          onClose={() => setShowAuth(false)}
-          reason="Sign in to view saved readings"
-        />
-      </div>
-    );
-  }
-
-  const loading = readings === undefined;
-
-  const handleUnsave = async (readingId: string) => {
-    setTogglingId(readingId);
+  async function reset() {
+    if (
+      !window.confirm(
+        "Delete the birth details, chart, and conversations in this workspace?",
+      )
+    )
+      return;
+    setBusy(true);
+    setError("");
     try {
-      await toggleSave({ readingId: readingId as Id<"readings"> });
-    } catch {
-      /* silent */
+      await runtimeApi.reset();
+      setMessages([]);
+    } catch (failure) {
+      setError(
+        failure instanceof Error ? failure.message : "Your data could not be cleared.",
+      );
     } finally {
-      setTogglingId(null);
-    }
-  };
-
-  function formatDate(timestamp: number) {
-    try {
-      return new Date(timestamp).toLocaleDateString("en-US", {
-        month: "short",
-        day: "numeric",
-        year: "numeric",
-      });
-    } catch {
-      return "";
+      setBusy(false);
     }
   }
 
   return (
-    <div className="flex min-h-dvh flex-col items-center px-4 py-8">
-      <div className="w-full max-w-2xl mb-4">
-        <Link
-          href="/chat"
-          className="text-sm text-text-secondary hover:text-accent transition-colors"
-        >
-          &larr; Back to Chat
-        </Link>
-      </div>
-
-      <h1 className="mb-6 text-2xl font-bold text-text-primary">
-        Saved Readings
-      </h1>
-
-      {loading ? (
-        <div className="flex w-full max-w-2xl flex-col items-center gap-4 glass-section p-8">
-          <Loader2 className="h-8 w-8 animate-spin text-accent" />
-          <p className="text-sm text-text-secondary">
-            Loading your saved readings...
-          </p>
-          <div className="w-full space-y-3 mt-2">
-            {Array.from({ length: 3 }, (_, i) => (
-              <div
-                key={i}
-                className="h-24 w-full animate-pulse rounded-xl bg-black/5"
-              />
-            ))}
-          </div>
-        </div>
-      ) : savedReadings.length === 0 ? (
-        <div className="flex w-full max-w-2xl flex-col items-center gap-3 glass-section p-10 text-center">
-          <Bookmark className="h-10 w-10 text-text-secondary/30" />
-          <p className="text-text-secondary">
-            No saved readings yet. Ask a question and bookmark it.
-          </p>
-          <Link
-            href="/chat"
-            className="mt-2 inline-block rounded-xl bg-accent px-5 py-2 text-sm font-medium text-white hover:brightness-110"
-          >
-            Start a Reading
-          </Link>
-        </div>
+    <section>
+      <h1 className="mb-2 text-2xl font-bold">Saved</h1>
+      <p className="note mb-4">Every conversation is saved with your workspace.</p>
+      {error && <p className="error mb-4">{error}</p>}
+      {!loaded ? (
+        <p className="note">Loading…</p>
+      ) : messages.length === 0 ? (
+        <p className="note">
+          No messages yet. Ask a question in chat and it will appear here.
+        </p>
       ) : (
-        <div className="w-full max-w-2xl space-y-3">
-          {savedReadings.map((r: { _id: string; query: string; method: string; domain: string; reading: string; isSaved?: boolean; createdAt: number }) => {
-            let readingData: { direct_answer?: string } = {};
-            try {
-              readingData = JSON.parse(r.reading);
-            } catch {
-              /* skip */
-            }
-            const directAnswer = readingData.direct_answer ?? "";
-
-            return (
-              <div key={r._id} className="glass-section p-5 transition-colors">
-                <div className="flex items-start justify-between gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="mb-2 font-medium text-text-primary">
-                      {r.query}
-                    </p>
-                    <div className="mb-2 flex flex-wrap items-center gap-2">
-                      <span className="rounded-full bg-accent/12 px-2.5 py-0.5 text-[11px] font-medium text-accent">
-                        {r.method}
-                      </span>
-                      <span className="rounded-full bg-black/5 px-2.5 py-0.5 text-[11px] font-medium text-text-secondary">
-                        {r.domain}
-                      </span>
-                    </div>
-                    {directAnswer && (
-                      <p className="mb-2 text-sm leading-relaxed text-text-secondary">
-                        {directAnswer.length > 100
-                          ? directAnswer.slice(0, 100) + "..."
-                          : directAnswer}
-                      </p>
-                    )}
-                    <p className="text-xs text-text-secondary/40">
-                      Saved {formatDate(r.createdAt)}
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => handleUnsave(r._id)}
-                    disabled={togglingId === r._id}
-                    className="shrink-0 rounded-lg p-2 text-accent transition-colors hover:bg-black/5 disabled:opacity-50"
-                    aria-label="Unsave reading"
-                    title="Remove from saved"
-                  >
-                    {togglingId === r._id ? (
-                      <Loader2 className="h-5 w-5 animate-spin" />
-                    ) : (
-                      <BookmarkX className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            );
-          })}
+        <div className="space-y-2">
+          {messages.map((messageItem) => (
+            <Link key={messageItem.id} href="/chat" className="card block">
+              <p className="mb-1 text-xs font-semibold">
+                {messageItem.role} ·{" "}
+                {new Date(messageItem.createdAt).toLocaleString()}
+              </p>
+              <p className="note">
+                {messageItem.content.length > 200
+                  ? `${messageItem.content.slice(0, 200)}…`
+                  : messageItem.content}
+              </p>
+            </Link>
+          ))}
         </div>
       )}
-    </div>
+      {messages.length > 0 && (
+        <button className="btn mt-4" onClick={reset} disabled={busy}>
+          {busy ? "Clearing…" : "Clear workspace"}
+        </button>
+      )}
+    </section>
   );
 }

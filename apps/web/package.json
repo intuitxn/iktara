@@ -1,38 +1,22 @@
 {
   "name": "web",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "private": true,
   "scripts": {
     "dev": "next dev --port 3000",
-    "build": "next build --webpack && mkdir -p .next/standalone/.next/server && echo '{}' > .next/standalone/.next/server/pages-manifest.json",
-    "start": "next start",
-    "deploy": "opennextjs-cloudflare && wrangler pages deploy"
+    "build": "next build --webpack",
+    "start": "next start"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "packageManager": "pnpm@10.31.0",
   "dependencies": {
-    "@auth/core": "^0.37.0",
-    "@convex-dev/auth": "^0.0.91",
-    "@convex-dev/polar": "^0.8.1",
     "@tailwindcss/postcss": "^4.2.1",
     "@types/node": "^25.3.5",
     "@types/react": "^19.2.14",
-    "convex": "^1.32.0",
-    "lucide-react": "^0.577.0",
     "next": "^16.1.6",
     "postcss": "^8.5.8",
-    "posthog-js": "^1.364.6",
     "react": "^19.2.4",
     "react-dom": "^19.2.4",
-    "react-markdown": "^10.1.0",
     "tailwindcss": "^4.2.1",
     "typescript": "^5.9.3"
-  },
-  "devDependencies": {
-    "@opennextjs/cloudflare": "^1.0.0",
-    "wrangler": "^4.0.0"
   }
 }
