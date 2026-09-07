@@ -256,16 +256,16 @@ test("HTTP boundary rejects missing keys, invalid requests, cross-origin calls, 
       time_of_birth: null,
       birth_time_quality: "unknown",
     };
-    assert.equal(
-      (
-        await fetch(`${base}/api/profile`, {
-          method: "PUT",
-          headers: { Cookie: cookie, "Content-Type": "application/json" },
-          body: JSON.stringify({ profile: ownProfile }),
-        })
-      ).status,
-      200,
-    );
+    const savedProfile = await (
+      await fetch(`${base}/api/profile`, {
+        method: "PUT",
+        headers: { Cookie: cookie, "Content-Type": "application/json" },
+        body: JSON.stringify({ profile: ownProfile }),
+      })
+    ).json();
+    assert.equal((savedProfile as { profile: { name: string } }).profile.name, "Synthetic A");
+    assert.ok("chart" in (savedProfile as object), "profile response includes the chart slot");
+    assert.equal((savedProfile as { chart: unknown }).chart, null);
     const other = (await (
       await fetch(`${base}/api/workspace`, {
         headers: { Cookie: secondCookie },

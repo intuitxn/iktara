@@ -148,7 +148,7 @@ export class WorkspaceStore {
       chart: row.chart ? (JSON.parse(row.chart) as ChartResult) : null,
       messages: this.db
         .query<Message, [string]>(
-          "SELECT id,page,role,content,created_at AS createdAt,job_id AS jobId FROM (SELECT *,rowid AS seq FROM messages WHERE owner=? ORDER BY created_at DESC,rowid DESC LIMIT 100) ORDER BY created_at ASC,seq ASC",
+          "SELECT id,page,role,content,created_at AS createdAt,job_id AS jobId FROM messages WHERE owner=? ORDER BY created_at DESC,rowid DESC LIMIT 100",
         )
         .all(owner).map(message => ({ ...message, ...this.reading(owner, message.jobId, message.role === "assistant") })),
       jobs: this.db
@@ -251,11 +251,22 @@ export class WorkspaceStore {
           "Iktara is busy. Please try again shortly.",
         );
       const current = this.workspace(owner);
-      if (page === "chart" && !current.chart)
-        throw new WorkspaceError(409, "Calculate your birth chart first, then ask your question.");
+      if (page === "chart") {
+        // A reading lens runs the original engines against the saved chart,
+        // so both the birth details and the calculated chart must exist.
+        if (!current.profile)
+          throw new WorkspaceError(409, "Save your birth details first.");
+        if (!current.chart)
+          throw new WorkspaceError(
+            409,
+            "Calculate your birth chart first, then ask your question.",
+          );
+      }
+      // Workspace messages are newest-first; keep the model history chronological.
       const history = current.messages
         .filter((item) => item.page === page)
-        .slice(-20)
+        .slice(0, 20)
+        .reverse()
         .map(({ role, content }) => ({
           role,
           content: content.slice(0, 8000),
