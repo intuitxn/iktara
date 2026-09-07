@@ -22,8 +22,11 @@ Browser → forsee.life (cloudflared tunnel, unchanged)
         shastra-compute Python chart service (Swiss Ephemeris)  port 8001  loopback
 ```
 
-- The prior UI (apps/web) becomes the public front. Its design, components and
-  i18n are kept; Convex, Polar, PostHog and the auth wall are removed.
+- The prior UI (apps/web) becomes the public front, but the UI code is
+  SIMPLIFIED to minimal per-page scaffolds (landing, onboarding, chart, chat,
+  saved). Each screen is designed by us from scratch, so every page file stays
+  short and easy to edit. Convex, Polar, PostHog, the auth wall and the heavy
+  reading components are removed.
 - The backend agent runtime is the per-user OpenCode server (apps/local/server,
   DeepSeek V4 Flash) answering with engine evidence from the original
   Vedic/KP/Western/Compare engines (codex/iktara-private-readings runtime work).
