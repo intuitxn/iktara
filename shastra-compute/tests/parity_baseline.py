@@ -2,6 +2,12 @@
 
 Run: python -m unittest discover -s tests -p 'parity*.py' -v
 Explicit baseline review: python tests/parity_baseline.py --record-upstream
+
+Engine source and dependency versions are pinned byte-for-byte against the recorded
+upstream baseline; only chart/evidence float values are compared with a small tolerance
+(FLOAT_ABS_TOL/FLOAT_REL_TOL) because Moshier-mode Swiss Ephemeris results differ slightly
+across CPU architectures (~1e-8..1e-7 degrees). Structure, keys, types, and non-float values
+must still match exactly.
 """
 from __future__ import annotations
 
@@ -113,6 +119,57 @@ def record_upstream():
     print(f"Recorded explicit upstream baseline: {FIXTURE}")
 
 
+FLOAT_ABS_TOL = 1e-6  # degrees; platform float noise in Moshier-mode charts is ~1e-8..1e-7
+FLOAT_REL_TOL = 1e-9
+
+
+def approx_diff(actual, expected, path="$", diffs=None):
+    """Compare nested chart/evidence payloads: floats within tolerance, everything else exact.
+
+    The pinned upstream baseline is recorded from byte-identical engine source with identical
+    pinned dependency versions, but Swiss Ephemeris Moshier-mode results differ slightly by CPU
+    architecture (libm/compiler), typically ~1e-8..1e-7 degrees. Structural differences (keys,
+    types, list lengths, non-float values) still fail exactly.
+    """
+    if diffs is None:
+        diffs = []
+    if isinstance(actual, float) and isinstance(expected, float):
+        scale = max(abs(actual), abs(expected), 1.0)
+        delta = abs(actual - expected)
+        if delta > max(FLOAT_ABS_TOL, FLOAT_REL_TOL * scale):
+            diffs.append((path, actual, expected, delta))
+        return diffs
+    if type(actual) is not type(expected):
+        diffs.append((path, actual, expected, None))
+        return diffs
+    if isinstance(expected, dict):
+        if set(actual) != set(expected):
+            diffs.append((path, sorted(actual), sorted(expected), None))
+            return diffs
+        for key in expected:
+            approx_diff(actual[key], expected[key], f"{path}.{key}", diffs)
+    elif isinstance(expected, list):
+        if len(actual) != len(expected):
+            diffs.append((path, f"length {len(actual)}", f"length {len(expected)}", None))
+            return diffs
+        for index, (item_a, item_e) in enumerate(zip(actual, expected)):
+            approx_diff(item_a, item_e, f"{path}[{index}]", diffs)
+    elif actual != expected:
+        diffs.append((path, actual, expected, None))
+    return diffs
+
+
+def fail_diff(diffs):
+    float_diffs = [d for d in diffs if isinstance(d[3], float)]
+    maximum = max((d[3] for d in float_diffs), default=0)
+    message = [f"{len(diffs)} value(s) differ ({len(float_diffs)} float, max float delta {maximum:.3e}):"]
+    for path, actual, expected, _delta in diffs[:12]:
+        message.append(f"  {path}: {actual!r} != {expected!r}")
+    if len(diffs) > 12:
+        message.append(f"  ... {len(diffs) - 12} more")
+    return "\n".join(message)
+
+
 class OriginalEngineParity(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -136,10 +193,14 @@ class OriginalEngineParity(unittest.TestCase):
         for expected, actual in zip(self.expected["cases"], self.actual["cases"], strict=True):
             with self.subTest(case=expected["input"]["id"]):
                 self.assertEqual(actual["input"], expected["input"])
-                self.assertEqual(actual["chart"], expected["chart"])
+                diffs = approx_diff(actual["chart"], expected["chart"], "chart")
+                if diffs:
+                    self.fail(fail_diff(diffs))
                 for method in ("vedic", "kp", "western", "compare"):
                     with self.subTest(method=method):
-                        self.assertEqual(actual["evidence"][method], expected["evidence"][method])
+                        diffs = approx_diff(actual["evidence"][method], expected["evidence"][method], f"evidence.{method}")
+                        if diffs:
+                            self.fail(fail_diff(diffs))
 
     def test_compare_contains_exact_component_evidence(self):
         for case in self.actual["cases"]:
