@@ -51,10 +51,13 @@ test("two browser identities never share profile, chart, conversation, or job re
     assert.deepEqual(store.workspace(b.owner).messages, []);
     assert.equal(store.workspace(b.owner).chart, null);
     assert.equal(store.workspace(b.owner).profile?.name, "Synthetic B");
-    assert.equal(
-      store.workspace(a.owner).messages.at(-1)?.content,
-      "A private answer",
-    );
+    const history = store.workspace(a.owner).messages;
+    assert.equal(history.length, 2);
+    assert.equal(history[0]?.role, "assistant");
+    assert.equal(history[0]?.content, "A private answer");
+    assert.equal(history[0]?.jobId, job.id);
+    assert.equal(history[1]?.role, "user");
+    assert.equal(history[1]?.content, "A private question");
     const next = store.enqueue(
       a.owner,
       "chart",
@@ -123,16 +126,80 @@ test("durable queue recovers pending jobs, fails interrupted inference, and dedu
       ["Second question"],
       "in-flight inference is never replayed after restart",
     );
-    assert.equal(
-      store.getJob(owner, pending.id)?.text,
-      "Completed in the background [E-0123456789abcdef]",
-    );
-    assert.equal(
+    assert.deepEqual(
       store
         .workspace(owner)
-        .messages.filter((message) => message.role === "assistant").length,
+        .messages.map((message) => message.content),
+      [
+        "Completed in the background [E-0123456789abcdef]",
+        "Second question",
+        "First question",
+      ],
+      "workspace messages are newest-first across pages",
+    );
+    const finished = store.getJob(owner, pending.id)!;
+    assert.equal(finished.status, "completed");
+    assert.equal(
+      finished.text,
+      "Completed in the background [E-0123456789abcdef]",
+    );
+    assert.equal(finished.error, null);
+    assert.equal(finished.method, "compare");
+    assert.equal(finished.domain, "general");
+    assert.ok(finished.evidence, "completed reading jobs keep their evidence");
+    assert.deepEqual(finished.evidence?.method, "compare");
+    const workspaceMessages = store.workspace(owner).messages;
+    assert.equal(
+      workspaceMessages.filter((message) => message.role === "assistant").length,
       1,
     );
+    assert.equal(workspaceMessages[0]?.role, "assistant");
+    assert.equal(
+      workspaceMessages[0]?.content,
+      "Completed in the background [E-0123456789abcdef]",
+    );
+    assert.equal(workspaceMessages[1]?.role, "user");
+    assert.deepEqual(workspaceMessages[0]?.evidence, finished.evidence);
+  } finally {
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+
+test("reading lenses require saved birth details and a calculated chart; reflection stays open", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "iktara-lens-validation-test-"));
+  const store = new WorkspaceStore(path.join(root, "test.sqlite"));
+  try {
+    const { owner } = store.createIdentity();
+    // Reflection never needs a profile or chart.
+    const reflection = store.enqueue(owner, "reflection", "How do I feel today?", "request-reflect");
+    assert.equal(reflection.page, "reflection");
+    // A reading lens (chart page) needs both birth details and a chart.
+    assert.throws(
+      () => store.enqueue(owner, "chart", "What does my chart say?", "request-chart", "vedic", "career"),
+      /Save your birth details first/,
+    );
+    store.saveProfile(owner, profile, null);
+    assert.throws(
+      () => store.enqueue(owner, "chart", "What does my chart say?", "request-chart", "vedic", "career"),
+      /Calculate your birth chart first/,
+    );
+    store.saveProfile(owner, profile, {
+      chart: { synthetic: "A chart" },
+      display_name: "New Delhi",
+      timezone: "Asia/Kolkata",
+    });
+    const reading = store.enqueue(owner, "chart", "What does my chart say?", "request-chart", "vedic", "career");
+    assert.equal(reading.page, "chart");
+    assert.equal(reading.method, "vedic");
+    assert.equal(reading.domain, "career");
+    assert.equal(reading.status, "pending");
+    assert.equal(reading.text, null);
+    assert.equal(reading.error, null);
+    // The accepted lens is recorded with the job and its messages from the start.
+    assert.equal(store.workspace(owner).messages[0]?.method, "vedic");
+    assert.equal(store.workspace(owner).messages[0]?.domain, "career");
   } finally {
     store.close();
     await rm(root, { recursive: true, force: true });

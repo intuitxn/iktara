@@ -293,7 +293,14 @@ const server = createServer(async (request, response) => {
         return json(response, 202, { jobId: job.id });
       }
       if (pathname === "/api/chart" && request.method === "POST") {
-        const profile = profileValue(value);
+        // The UI contract sends { profile }; the earlier client sent the
+        // profile fields directly. Accept both shapes without widening fields.
+        let payload = value;
+        if ("profile" in value) {
+          only(value, ["profile"]);
+          payload = value.profile as Record<string, unknown>;
+        }
+        const profile = profileValue(payload);
         if (!profile.date_of_birth || !profile.birthplace)
           throw new HttpError(400, "Provide a birth date and birthplace.");
         if (profile.birth_time_quality !== "unknown" && !profile.time_of_birth)
@@ -319,7 +326,8 @@ const server = createServer(async (request, response) => {
             "The chart service returned an invalid result.",
           );
         store.saveProfile(owner, profile, result);
-        return json(response, 200, result);
+        // Profile plus the calculated chart so the UI can render immediately.
+        return json(response, 200, { ...result, profile });
       }
     }
     if (pathname.startsWith("/api/"))
