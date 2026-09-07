@@ -3,7 +3,6 @@ import {
   type IncomingMessage,
   type ServerResponse,
 } from "node:http";
-import { readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import {
@@ -39,7 +38,9 @@ const allowedHosts = new Set([
   `[::1]:${port}`,
   ...(publicOrigin ? [publicOrigin.host] : []),
 ]);
-const dist = path.join(appRoot, "dist");
+const webUrl = new URL(process.env.WEB_URL || "http://127.0.0.1:3211");
+if (!["localhost", "127.0.0.1", "[::1]"].includes(webUrl.hostname))
+  throw new Error("WEB_URL must point to the local web server");
 const maxBody = 64 * 1024;
 const buckets = new Map<string, { count: number; until: number }>();
 const store = new WorkspaceStore(
@@ -179,16 +180,83 @@ async function chartReady() {
     return false;
   }
 }
-const mime: Record<string, string> = {
-  ".html": "text/html",
-  ".js": "text/javascript",
-  ".css": "text/css",
-  ".svg": "image/svg+xml",
-  ".png": "image/png",
-  ".ico": "image/x-icon",
-  ".woff2": "font/woff2",
-  ".woff": "font/woff",
-};
+async function webReady() {
+  try {
+    const response = await fetch(new URL("/", webUrl), {
+      signal: AbortSignal.timeout(2000),
+    });
+    return response.status < 500;
+  } catch {
+    return false;
+  }
+}
+const hopByHop = new Set([
+  "connection",
+  "keep-alive",
+  "transfer-encoding",
+  "upgrade",
+  // The runtime's fetch decompresses response bodies, so forwarding these
+  // upstream headers would describe bytes we no longer send.
+  "content-encoding",
+  "content-length",
+]);
+async function proxyToWeb(
+  request: IncomingMessage,
+  response: ServerResponse,
+  pathname: string,
+) {
+  const parsed = new URL(request.url || "/", "http://localhost");
+  const target = new URL(`${webUrl.origin}${parsed.pathname}${parsed.search}`);
+  const headers: Record<string, string> = {};
+  for (const [name, value] of Object.entries(request.headers)) {
+    if (value === undefined || hopByHop.has(name)) continue;
+    headers[name] = Array.isArray(value) ? value.join(", ") : value;
+  }
+  headers["x-forwarded-host"] = request.headers.host || "";
+  headers["x-forwarded-proto"] = publicOrigin?.protocol.replace(":", "") || "http";
+  let upstream: Response;
+  try {
+    upstream = await fetch(target, {
+      method: request.method,
+      headers,
+      signal: AbortSignal.timeout(60_000),
+    });
+  } catch {
+    json(response, 502, { error: "The page service is unavailable. Please try again shortly." });
+    return;
+  }
+  const responseHeaders: Record<string, string | number> = {};
+  for (const [name, value] of upstream.headers.entries()) {
+    if (hopByHop.has(name)) continue;
+    responseHeaders[name] = value;
+  }
+  response.writeHead(upstream.status, {
+    "Cache-Control": "no-cache",
+    ...responseHeaders,
+  });
+  if (request.method === "HEAD" || !upstream.body) {
+    response.end();
+    return;
+  }
+  const reader = upstream.body.getReader();
+  const pump = async () => {
+    try {
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) {
+          response.end();
+          return;
+        }
+        response.write(value);
+      }
+    } catch {
+      response.end();
+    }
+  };
+  void pump();
+  request.on("aborted", () => reader.cancel().catch(() => {}));
+}
+
 const server = createServer(async (request, response) => {
   response.setHeader("X-Content-Type-Options", "nosniff");
   response.setHeader("Referrer-Policy", "same-origin");
@@ -206,6 +274,7 @@ const server = createServer(async (request, response) => {
         ok: true,
         opencode: runtimeStatus(),
         chart: { ready: await chartReady() },
+        web: { ready: await webReady() },
       });
     if (pathname === "/api/workspace" && request.method === "GET") {
       limit(`open:${request.socket.remoteAddress}`, 120);
@@ -334,26 +403,7 @@ const server = createServer(async (request, response) => {
       return json(response, 404, { error: "Endpoint not found." });
     if (request.method !== "GET" && request.method !== "HEAD")
       throw new HttpError(405, "Method not allowed.");
-    const decoded = decodeURIComponent(pathname);
-    let filename = path.resolve(dist, `.${decoded}`);
-    if (filename !== dist && !filename.startsWith(`${dist}${path.sep}`))
-      throw new HttpError(404, "Not found.");
-    if (!(await stat(filename).catch(() => null))?.isFile())
-      filename = path.join(dist, "index.html");
-    const contents = await readFile(filename).catch(() => null);
-    if (!contents)
-      throw new HttpError(
-        503,
-        "Build the Iktara frontend first with npm run build.",
-      );
-    response.writeHead(200, {
-      "Content-Type":
-        mime[path.extname(filename)] || "application/octet-stream",
-      "Cache-Control": filename.endsWith("index.html")
-        ? "no-cache"
-        : "public, max-age=3600",
-    });
-    response.end(request.method === "HEAD" ? undefined : contents);
+    await proxyToWeb(request, response, pathname);
   } catch (error) {
     json(response, error instanceof WorkspaceError ? error.status : 502, {
       error:

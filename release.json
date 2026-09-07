@@ -5,17 +5,16 @@
   "runtime": "opencode-v2",
   "publicUrl": "https://forsee.life",
   "changes": [
-    "Original Vedic, KP, Western and Compare engines callable through a workspace-bound OpenCode v2 plugin",
-    "Private readings with saved calculation evidence, exact source references and explicit timing limitations",
-    "Reading lenses, expandable evidence, follow-up and reconnect/retry experience",
-    "Pinned upstream parity fixtures and reviewed artifact context for team agents"
+    "Restored the prior product UI (simplified Next.js pages: landing, onboarding, chart, chat, saved) as the public front",
+    "Backend agent runtime: per-user OpenCode v2 server with original Vedic/KP/Western/Compare engine evidence",
+    "Three-service deployment: public runtime proxies pages to the web app; chart service stays loopback",
+    "Removed Convex, Polar, PostHog, auth walls and heavy reading components from the web app",
+    "Health checks now cover web, chart and model readiness; candidate smoke boots are port-isolated"
   ],
   "decisionLinks": [],
   "limitations": [
-    "Candidate release only until reviewed main, exact-SHA CI and active-host verification complete",
+    "Shared live coding-session access, coordinator activation and automatic CI-to-Buzz publication are not activated",
     "Engine confidence is heuristic; astrology is not scientifically established prediction",
-    "Inherited KP computation-weekday rule and birth-period dasha are preserved, not current timing evidence",
-    "Reference checks verify supplied IDs, not semantic entailment of every model claim",
-    "Shared live coding-session access, general product-agent delegation, coordinator activation and automatic CI-to-Buzz publication are not activated"
+    "Inherited KP computation-weekday rule and birth-period dasha are preserved, not current timing evidence"
   ]
 }

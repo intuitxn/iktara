@@ -20,7 +20,7 @@ test('supervisor activates healthy releases, restores prior release on startup f
     const release = path.join(directory, 'releases', sha);
     await mkdir(path.join(release, 'apps/local/scripts'), { recursive: true });
     await writeFile(path.join(release, '.validated.json'), JSON.stringify({ sha }));
-    await writeFile(path.join(release, 'apps/local/scripts/start.mjs'), broken ? 'process.exit(1);' : `import {createServer} from 'node:http'; const server=createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ok:true,chart:{ready:true},opencode:{configured:false}}))});server.listen(Number(process.env.PORT),'127.0.0.1');process.on('SIGTERM',()=>server.close(()=>process.exit(0)));`);
+    await writeFile(path.join(release, 'apps/local/scripts/start.mjs'), broken ? 'process.exit(1);' : `import {createServer} from 'node:http'; const server=createServer((req,res)=>{res.setHeader('Content-Type','application/json');res.end(JSON.stringify({ok:true,chart:{ready:true},web:{ready:true},opencode:{configured:false}}))});server.listen(Number(process.env.PORT),'127.0.0.1');process.on('SIGTERM',()=>server.close(()=>process.exit(0)));`);
   }
   async function select(sha) { const temp = path.join(directory, 'select.tmp'); await symlink(path.join(directory, 'releases', sha), temp); await rename(temp, path.join(directory, 'current')); }
   async function waitFor(predicate) {

@@ -13,10 +13,10 @@ for us (no cloud accounts, no subscriptions, Iktara branding).
 Browser → forsee.life (cloudflared tunnel, unchanged)
             │
             ▼
-        Next.js app (apps/web, prior product UI)  port 3210  PUBLIC
-            │  rewrites /api/* → http://127.0.0.1:3211/api/*
+        apps/local runtime (OpenCode server per user)  port 3210  PUBLIC
+            │  serves /api/* itself, proxies all other paths to:
             ▼
-        apps/local Node runtime (OpenCode server per user)  port 3211  loopback
+        Next.js app (apps/web, prior product UI)  port 3211  loopback
             │  chart calls → http://127.0.0.1:8001
             ▼
         shastra-compute Python chart service (Swiss Ephemeris)  port 8001  loopback
