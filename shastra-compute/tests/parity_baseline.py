@@ -15,6 +15,7 @@ import hashlib
 import io
 import json
 import os
+from datetime import datetime
 from pathlib import Path
 import subprocess
 import sys
@@ -121,6 +122,7 @@ def record_upstream():
 
 FLOAT_ABS_TOL = 1e-6  # degrees; platform float noise in Moshier-mode charts is ~1e-8..1e-7
 FLOAT_REL_TOL = 1e-9
+TIME_ABS_TOL = 1.0  # seconds; dasha period timestamps inherit the same platform float noise
 
 
 def approx_diff(actual, expected, path="$", diffs=None):
@@ -154,6 +156,18 @@ def approx_diff(actual, expected, path="$", diffs=None):
             return diffs
         for index, (item_a, item_e) in enumerate(zip(actual, expected)):
             approx_diff(item_a, item_e, f"{path}[{index}]", diffs)
+    elif isinstance(expected, str):
+        # Dasha period timestamps inherit platform float noise (~microseconds);
+        # compare ISO datetimes within TIME_ABS_TOL, other strings exactly.
+        try:
+            instant_a = datetime.fromisoformat(actual)
+            instant_e = datetime.fromisoformat(expected)
+        except (ValueError, TypeError):
+            if actual != expected:
+                diffs.append((path, actual, expected, None))
+        else:
+            if abs((instant_a - instant_e).total_seconds()) > TIME_ABS_TOL:
+                diffs.append((path, actual, expected, None))
     elif actual != expected:
         diffs.append((path, actual, expected, None))
     return diffs
