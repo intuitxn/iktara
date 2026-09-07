@@ -1,8 +1,20 @@
 "use client";
 
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import { DOMAINS, METHODS, isActiveJob, runtimeApi } from "@/app/lib/runtimeApi";
+import { isActiveJob, runtimeApi } from "@/app/lib/runtimeApi";
 import type { Job, Message, Profile, ReadingDomain, ReadingMethod } from "@/app/lib/runtimeApi";
+import { Button, Card, Field, Select, StatusPill } from "@/app/components/ui";
+
+const LENS_OPTIONS = [
+  { value: "vedic", label: "Vedic" }, { value: "kp", label: "KP" },
+  { value: "western", label: "Western" }, { value: "compare", label: "Compare" },
+];
+
+const TOPIC_OPTIONS = [
+  { value: "general", label: "General" }, { value: "career", label: "Career" },
+  { value: "relationships", label: "Relationships" }, { value: "health", label: "Health" },
+  { value: "education", label: "Education" }, { value: "money", label: "Finance" },
+];
 
 export default function ChatPage() {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -74,73 +86,94 @@ export default function ChatPage() {
   }
 
   return (
-    <section className="flex min-h-[70vh] flex-col">
-      <h1 className="mb-4 text-2xl font-bold">Chat</h1>
-      {profile && (
-        <p className="note mb-4">
-          Reading for {profile.name || "you"} · {profile.date_of_birth}
-          {hasChart ? "" : " · no chart computed yet"}
-        </p>
-      )}
-      {error && <p className="error mb-4">{error}</p>}
-      <div className="card grow space-y-4">
-        {messages.length === 0 && !busy && <p className="note">Ask a question to start a reading.</p>}
-        {messages.map((item) => (
-          <div key={item.id}>
-            <p className="mb-1 text-xs font-semibold">
-              {item.role === "user" ? "You" : "Iktara"}
-              {item.method ? ` · ${item.method}` : ""}
-              {item.domain && item.domain !== "general" ? ` · ${item.domain}` : ""}
+    <section>
+      <h1 className="page-title">Chat</h1>
+      <div className="stack">
+        {profile && (
+          <Card>
+            <p className="card-meta">
+              <span>{profile.name || "Your space"} · {profile.date_of_birth}</span>
+              <span>{hasChart ? "chart ready" : "no chart yet"}</span>
             </p>
-            <pre className="whitespace-pre-wrap text-sm">{item.content}</pre>
-            {item.evidence && <EvidenceDetails evidence={item.evidence} />}
+            <p className="muted">
+              {hasChart ? "Questions are answered from your calculated chart." : "Calculate your chart for chart-grounded readings."}
+            </p>
+            {!hasChart && <Button href="/chart" variant="ghost">Calculate your chart</Button>}
+          </Card>
+        )}
+        {error && <p className="error">{error}</p>}
+        {messages.map((item) => (
+          <div key={item.id} className={`chat-row chat-row--${item.role === "user" ? "user" : "assistant"}`}>
+            <Card variant={item.role === "user" ? "user" : "assistant"}>
+              <p className="card-meta">
+                <span>{item.role === "user" ? "You" : "Iktara"}</span>
+                <span>{item.method ? `${item.method} · ` : ""}{new Date(item.createdAt).toLocaleString()}</span>
+              </p>
+              <pre className="data">{item.content}</pre>
+              {item.evidence && (
+                <EvidenceDetails items={item.evidence.items} limitations={item.evidence.limitations} />
+              )}
+            </Card>
           </div>
         ))}
         {busy && (
-          <p className="note">
-            {job?.status === "pending" ? "Your question is queued…" : "Your companion is working…"}
-          </p>
+          <div className="chat-row chat-row--assistant">
+            <Card>
+              <StatusPill status={job?.status ?? "pending"} />
+            </Card>
+          </div>
         )}
+        <form onSubmit={send}>
+          <Card>
+            <div className="row">
+              <Field label="Lens" htmlFor="lens">
+                <Select id="lens" value={method} disabled={busy}
+                  onChange={(value) => setMethod(value as ReadingMethod)} options={LENS_OPTIONS} />
+              </Field>
+              <Field label="Topic" htmlFor="topic">
+                <Select id="topic" value={domain} disabled={busy}
+                  onChange={(value) => setDomain(value as ReadingDomain)} options={TOPIC_OPTIONS} />
+              </Field>
+            </div>
+            <Field label="Message" htmlFor="message">
+              <textarea id="message" rows={3} value={draft} maxLength={4000} disabled={busy}
+                onChange={(e) => setDraft(e.target.value)} placeholder="Ask about your chart…" />
+            </Field>
+            <Button type="submit" disabled={busy || !draft.trim()}>
+              Send
+            </Button>
+          </Card>
+        </form>
       </div>
-      <form onSubmit={send} className="card mt-4">
-        <div className="field">
-          <textarea rows={3} value={draft} maxLength={4000} disabled={busy}
-            onChange={(e) => setDraft(e.target.value)} placeholder="Ask about your chart…" />
-        </div>
-        <div className="mb-4 flex flex-wrap gap-4">
-          <div className="field mb-0 w-40">
-            <label htmlFor="method">Method</label>
-            <select id="method" value={method} disabled={busy}
-              onChange={(e) => setMethod(e.target.value as ReadingMethod)}>
-              {METHODS.map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </div>
-          <div className="field mb-0 grow">
-            <label htmlFor="domain">Topic</label>
-            <select id="domain" value={domain} disabled={busy}
-              onChange={(e) => setDomain(e.target.value as ReadingDomain)}>
-              {DOMAINS.map((value) => <option key={value} value={value}>{value}</option>)}
-            </select>
-          </div>
-        </div>
-        <button type="submit" className="btn btn-primary" disabled={busy || !draft.trim()}>
-          Send
-        </button>
-      </form>
     </section>
   );
 }
 
-function EvidenceDetails({ evidence }: { evidence: NonNullable<Message["evidence"]> }) {
+function EvidenceDetails({
+  items,
+  limitations,
+}: {
+  items: NonNullable<Message["evidence"]>["items"];
+  limitations: string[];
+}) {
   return (
-    <details className="mt-2 text-sm">
-      <summary className="note cursor-pointer">Calculation evidence ({evidence.items.length} items)</summary>
-      {evidence.limitations.length > 0 && (
-        <ul className="note mt-2 list-disc pl-5">
-          {evidence.limitations.map((limit, index) => <li key={index}>{limit}</li>)}
-        </ul>
+    <div>
+      {items.map((item) => (
+        <details className="evidence" key={item.id}>
+          <summary>{item.id} · {item.system} · {item.kind}</summary>
+          <pre className="data">{JSON.stringify(item.detail, null, 2)}</pre>
+        </details>
+      ))}
+      {limitations.length > 0 && (
+        <details className="evidence">
+          <summary>Limits of this reading</summary>
+          <ul>
+            {limitations.map((limit, index) => (
+              <li className="muted" key={index}>{limit}</li>
+            ))}
+          </ul>
+        </details>
       )}
-      <pre className="mt-2 overflow-x-auto text-xs">{JSON.stringify(evidence.items, null, 2)}</pre>
-    </details>
+    </div>
   );
 }

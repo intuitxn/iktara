@@ -1,15 +1,18 @@
-import Link from "next/link";
+import { Button } from "@/app/components/ui";
 
 export default function Home() {
   return (
-    <section>
-      <h1 className="mb-2 text-3xl font-bold">iktara</h1>
-      <p className="note mb-6">
-        Personalized astrology readings from your birth chart.
+    <section className="hero">
+      <h1 className="hero-title">
+        iktara<span className="hero-dot">.</span>
+      </h1>
+      <p className="tagline">A little closer to yourself</p>
+      <p className="muted">
+        Birth details → your chart → readings. No account, just your space.
       </p>
-      <Link href="/onboarding" className="btn btn-primary">
-        Get started
-      </Link>
+      <Button href="/onboarding" variant="primary">
+        Start with your birth details
+      </Button>
     </section>
   );
 }
