@@ -34,7 +34,7 @@ test("readings survive reload, remain owner scoped and clear cascades; ungrounde
   let store = new WorkspaceStore(filename);
   try {
     const a = store.createIdentity(), b = store.createIdentity();
-    assert.throws(() => store.enqueue(a.owner, "chart", "Question", "empty"), /Calculate/);
+    assert.throws(() => store.enqueue(a.owner, "chart", "Question", "empty"), /Save your birth details first/);
     store.saveProfile(a.owner, { name: "Synthetic", date_of_birth: "2000-01-01", time_of_birth: "12:00", birthplace: "New Delhi", birth_time_quality: "exact" }, { chart: { synthetic: true }, latitude: 28.61, longitude: 77.21, timezone: "Asia/Kolkata", display_name: "Synthetic" });
     const job = store.enqueue(a.owner, "chart", "Question", "first", "western", "career");
     const worker = new JobWorker(store, async input => {
@@ -45,8 +45,14 @@ test("readings survive reload, remain owner scoped and clear cascades; ungrounde
     for (let i = 0; i < 40 && store.getJob(a.owner, job.id)?.status !== "completed"; i++) await new Promise(resolve => setTimeout(resolve, 5));
     await worker.stop();
     store.close(); store = new WorkspaceStore(filename);
-    assert.deepEqual(store.workspace(a.owner).messages.at(-1)?.evidence, evidence);
-    assert.equal(store.workspace(a.owner).messages[0]?.method, "western");
+    const readingHistory = store.workspace(a.owner).messages;
+    assert.equal(readingHistory[0]?.role, "assistant");
+    assert.deepEqual(readingHistory[0]?.evidence, evidence);
+    assert.equal(readingHistory[0]?.method, "western");
+    assert.equal(readingHistory[0]?.domain, "career");
+    assert.equal(readingHistory[1]?.role, "user");
+    assert.equal(readingHistory[1]?.method, "western");
+    assert.equal(readingHistory[1]?.evidence, undefined);
     assert.equal(store.getJob(b.owner, job.id), null);
     assert.deepEqual(store.workspace(b.owner).messages, []);
     const followup = store.enqueue(a.owner, "chart", "And relationships?", "second", "kp", "relationships");
