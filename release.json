@@ -1,15 +1,14 @@
 {
   "product": "Iktara",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "model": "opencode/deepseek-v4-flash",
   "runtime": "opencode-v2",
   "publicUrl": "https://forsee.life",
   "changes": [
-    "Restore AstroPersonalised sky-blue glass UI, original logo, landing and detailed chart views",
-    "Connect question-first readings, all four lenses, numbered source links, follow-ups and saved answers to the owned OpenCode runtime",
-    "Recover pending readings after reload and preserve questions for explicit retry",
-    "Resolve short model citation labels to exact immutable evidence IDs; retain the original engines and complete private evidence",
-    "Label birth-period dasha accurately and hide houses/ascendant for unknown birth time"
+    "Open directly into chat with reflection before birth details and chart-grounded readings after setup",
+    "Use a quiet reading layout, compact icon navigation and separate Answer, Sources and Details views",
+    "Write personal answers in connected prose with evidence links and a follow-up question",
+    "Simplify birth-time input and show both reflection and astrology answers in conversation history"
   ],
   "decisionLinks": [],
   "limitations": [

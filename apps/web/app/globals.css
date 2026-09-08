@@ -10,10 +10,10 @@
   --color-graphite: #b8d4f2;
   --color-navy: rgba(255, 255, 255, 0.35);
   --color-indigo: #5b6abf;
-  --color-accent: #4a7fd4;
+  --color-accent: #247780;
   --color-accent-warm: #d4a574;
-  --color-text-primary: #1a1a2e;
-  --color-text-secondary: #5a5a7a;
+  --color-text-primary: #252525;
+  --color-text-secondary: #636762;
 }
 
 body {
@@ -22,14 +22,7 @@ body {
     system-ui,
     -apple-system,
     sans-serif;
-  background: linear-gradient(
-    180deg,
-    #a8cbee 0%,
-    #b8d6f4 25%,
-    #d0e3f8 50%,
-    #dfe9f6 75%,
-    #e8edf8 100%
-  );
+  background: #fafafa;
   background-attachment: fixed;
   color: var(--color-text-primary);
   min-height: 100dvh;
@@ -546,3 +539,16 @@ pre.data {
     scroll-behavior: auto !important;
   }
 }
+
+/* Quiet reading surfaces shared by chat, profile, chart and history. */
+.liquid-glass, .liquid-glass-hero, .glass-card, .glass-section, .card {
+  background: #ffffff;
+  border: 1px solid #dddddd;
+  box-shadow: none;
+  backdrop-filter: none;
+}
+.glass-panel { background: #f0f0f0; border-color: #dddddd; backdrop-filter: none; }
+.liquid-glass-dropdown { background: #ffffff; border-color: #dddddd; }
+.field input:not([type="checkbox"]), .field select { background: #ffffff; border-color: #dddddd; }
+.answer-markdown { font-size: 16px; line-height: 1.85; }
+.answer-markdown a { color: var(--color-accent); }

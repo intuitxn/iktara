@@ -79,3 +79,15 @@ The engine in this repository must stay identical to the prior version from the 
 ## Buzz
 
 The project is already registered in Buzz (`project.json` → `buzz.project`, `projectAddress`, channel `iktara`). Buzz holds requests, decisions, and reviewed handoffs; git holds executable context and prompts. See `docs/PROJECT.md`.
+
+## Conversation storage and the chat entry flow
+
+The public home and chat screens share one conversation view. Without a saved chart, questions use the reflection world; with a chart, they use the chart world. The UI names this distinction before sending. History includes both worlds, while inference receives only the latest 20 messages from its own world, each capped at 8,000 characters. The workspace API shows at most 100 recent messages and 30 jobs; this is not unlimited model memory or a complete transcript export.
+
+The private product SQLite database persists questions, completed answers and reading evidence under a server-resolved browser owner. There are no authenticated accounts or cross-device recovery. The browser cookie expires after 30 days; losing it loses access. Expiry is not a data-deletion policy. Explicit workspace reset deletes the profile, chart, messages, jobs and evidence. Internal OpenCode sessions are short-lived and removed after inference; they are not the durable user transcript.
+
+## Proposed infrastructure trigger service (not activated)
+
+Reuse the existing agent-iktara coordinator with a separate private OpenCode coding service. An accepted task packet should freeze the Iktara task ID, source thread, requested outcome, repository base SHA and allowed actions. Deduplicate by task ID plus revision, work in an isolated branch/worktree, run repository checks and return a candidate SHA, preview and PR. Exact-candidate review remains the merge gate. Existing CI and the host watcher handle deployment and rollback; a verified receipt can then support an authorized Buzz update.
+
+The coding service must have its own profile and scoped repository credentials. Customer agents retain their existing restricted capabilities and cannot trigger builds. Do not mount a public OpenCode coding endpoint or reuse customer transcript storage for infrastructure tasks. The Buzz trigger adapter, execution queue and service installation remain future work; this proposal does not activate them.

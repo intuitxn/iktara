@@ -50,17 +50,17 @@ export default function OnboardingPage() {
     if (busy) return;
     if (!dob || !birthplace.trim()) return;
     if (!unknownTime && !tob) {
-      setError("Add a birth time or tick “unknown”.");
+      setError("Add a birth time or choose “I do not know my birth time”.");
       return;
     }
     setBusy(true);
     setError("");
     const profile: Profile = {
       ...EMPTY_PROFILE,
-      name,
+      name: name.trim(),
       date_of_birth: dob,
       time_of_birth: unknownTime ? null : tob,
-      birthplace,
+      birthplace: birthplace.trim(),
       birth_time_quality: unknownTime
         ? "unknown"
         : (quality as Profile["birth_time_quality"]),
@@ -122,15 +122,6 @@ export default function OnboardingPage() {
               disabled={busy || unknownTime}
               onChange={(e) => setTob(e.target.value)}
             />
-            <label className="check-row">
-              <input
-                type="checkbox"
-                checked={unknownTime}
-                disabled={busy}
-                onChange={(e) => setUnknownTime(e.target.checked)}
-              />
-              I don&apos;t know my birth time
-            </label>
           </Field>
           <Field label="How certain is the time?" htmlFor="quality">
             <Select
@@ -164,7 +155,7 @@ export default function OnboardingPage() {
           </Field>
           {error && <p className="error">{error}</p>}
           <Button type="submit" disabled={busy || !loaded}>
-            {busy ? "Calculating your chart…" : "Create my chart"}
+            {busy ? "Calculating your chart…" : "Save chart & continue chatting"}
           </Button>
           <p className="mt-5 text-xs text-text-secondary leading-relaxed">
             Your birthplace is looked up to calculate the chart. Questions and

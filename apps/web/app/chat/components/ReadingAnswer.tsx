@@ -1,10 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import ReactMarkdown from "react-markdown";
-import { BookOpen, ChevronRight } from "lucide-react";
+import { BookOpen, ChevronRight, MessageCircle, Info } from "lucide-react";
 import type { Message } from "@/app/lib/runtimeApi";
 
 function label(value: string) {
+  if (value.toLowerCase() === "kp") return "KP";
   return value.replaceAll("_", " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
@@ -49,6 +51,7 @@ export default function ReadingAnswer({
   onFollowUp?: (question: string) => void;
   disabled?: boolean;
 }) {
+  const [tab, setTab] = useState("answer");
   const evidence = message.evidence;
   const items = evidence?.items ?? [];
   const reference = (id: string) => `evidence-${message.id}-${id}`;
@@ -107,17 +110,29 @@ export default function ReadingAnswer({
         )}
         {message.domain && <span>{label(message.domain)}</span>}
       </div>
-      <div className="answer-markdown text-text-secondary">
+      <div className="flex gap-5 border-b border-black/10 mb-5" aria-label="Reading views">
+        {([{id:"answer",label:"Answer",Icon:MessageCircle}, ...(evidence ? [{id:"sources",label:`Sources · ${shownItems.length}`,Icon:BookOpen},{id:"details",label:"Details",Icon:Info}] : [])]).map(({id,label,Icon}) => (
+          <button key={id} aria-pressed={tab === id} onClick={() => setTab(id)} className={`flex items-center gap-2 py-3 text-sm border-b-2 ${tab === id ? "border-accent text-accent" : "border-transparent text-text-secondary"}`}><Icon size={16}/>{label}</button>
+        ))}
+      </div>
+      <div hidden={tab !== "answer"} className="answer-markdown text-text-primary">
         <ReactMarkdown
           components={{
             a: ({ href, children }) => (
               <a
                 href={href}
-                onClick={() => {
+                onClick={(event) => {
                   if (href?.startsWith("#evidence-")) {
-                    const target = document.getElementById(href.slice(1));
-                    if (target instanceof HTMLDetailsElement)
-                      target.open = true;
+                    event.preventDefault();
+                    setTab("sources");
+                    requestAnimationFrame(() => {
+                      const target = document.getElementById(href.slice(1));
+                      if (target instanceof HTMLDetailsElement) {
+                        target.open = true;
+                        target.scrollIntoView({block:"nearest"});
+                        target.querySelector("summary")?.focus();
+                      }
+                    });
                   }
                 }}
               >
@@ -130,7 +145,8 @@ export default function ReadingAnswer({
         </ReactMarkdown>
       </div>
       {evidence && (
-        <div className="mt-5">
+        <div hidden={tab === "answer"} className="mt-5">
+          <div hidden={tab !== "sources"}>
           <h3 className="mb-2 text-xs font-semibold text-text-primary">
             Chart sources · {shownItems.length}
           </h3>
@@ -138,13 +154,15 @@ export default function ReadingAnswer({
             Calculated placements and traditional interpretations used for this
             answer.
           </p>
-          <div className="space-y-2">{shownItems.map(sourceCard)}</div>
+          <div className="grid gap-2 sm:grid-cols-2 items-start">{shownItems.map(sourceCard)}</div>
           {otherItems.length > 0 && (
             <details className="mt-3 text-xs text-text-secondary">
               <summary>All other engine evidence · {otherItems.length}</summary>
               <div className="space-y-2 mt-3">{otherItems.map(sourceCard)}</div>
             </details>
           )}
+          </div>
+          <div hidden={tab !== "details"}>
           {evidence.limitations.length > 0 && (
             <details className="mt-4 glass-card p-3">
               <summary className="text-xs font-medium">
@@ -166,9 +184,10 @@ export default function ReadingAnswer({
               <div>Evidence: {evidence.id}</div>
             </dl>
           </details>
+          </div>
         </div>
       )}
-      {questions.length > 0 && onFollowUp && (
+      {tab === "answer" && questions.length > 0 && onFollowUp && (
         <div className="mt-5">
           <p className="mb-2 text-xs font-semibold">Explore Further</p>
           <div className="flex flex-col gap-2">

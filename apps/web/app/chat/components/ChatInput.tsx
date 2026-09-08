@@ -16,6 +16,7 @@ interface ChatInputProps {
   method: string;
   onMethodChange: (method: string) => void;
   canCompare?: boolean;
+  hasChart?: boolean;
   centered?: boolean;
   draft?: string;
   onDraftChange?: (value: string) => void;
@@ -27,6 +28,7 @@ export default function ChatInput({
   method,
   onMethodChange,
   canCompare = false,
+  hasChart = true,
   centered = false,
   draft,
   onDraftChange,
@@ -66,7 +68,7 @@ export default function ChatInput({
     const trimmed = value.trim();
     if (!trimmed || isLoading) return;
     onSubmit(trimmed);
-    setValue("");
+    if (draft === undefined) setValue("");
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   };
 
@@ -104,26 +106,26 @@ export default function ChatInput({
           onChange={(e) => setValue(e.target.value)}
           onKeyDown={handleKeyDown}
           onFocus={handleFocus}
-          placeholder="Ask about your career, love, timing, purpose..."
+          placeholder="Ask anything about yourself…"
           aria-label="Ask an astrology question"
           maxLength={4000}
           rows={1}
           disabled={isLoading}
-          className="w-full resize-none bg-transparent text-[15px] text-text-primary placeholder:text-text-secondary/35 outline-none disabled:opacity-50 min-h-[28px] leading-relaxed"
+          className="w-full resize-none bg-transparent text-[15px] text-text-primary placeholder:text-text-secondary outline-none disabled:opacity-50 min-h-[28px] leading-relaxed"
         />
       </div>
 
       {/* Bottom toolbar */}
       <div className="flex items-center justify-between px-4 pb-3 pt-1">
         {/* Left side */}
-        <span className="text-[11px] text-text-secondary/25 select-none hidden sm:block">
+        <span className="text-[11px] text-text-secondary select-none hidden sm:block">
           Shift+Enter for new line
         </span>
 
         {/* Right side — method + send */}
         <div className="flex items-center gap-2.5 ml-auto">
           {/* Method selector */}
-          <div className="relative" ref={dropdownRef}>
+          <div hidden={!hasChart} className="relative" ref={dropdownRef}>
             <button
               type="button"
               disabled={isLoading}
