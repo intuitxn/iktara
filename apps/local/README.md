@@ -1,6 +1,6 @@
 # Local Iktara
 
-From the repository root, run `npm run setup`, then build the Next frontend once with `cd apps/web && corepack pnpm install && corepack pnpm build`, then `npm run dev`. The contributor instance is **http://127.0.0.1:3220**, separate from deployed port 3210. `npm run dev` boots three services: the Next app on port 3220, this runtime on 3211, and the chart service on 8020; do not run it on the same machine as a deployed host. See [CONTRIBUTING](../../CONTRIBUTING.md).
+From the repository root, run `npm run setup`, then build the Next frontend once with `cd apps/web && corepack pnpm install && corepack pnpm build`, then `npm run dev`. The contributor instance is **http://127.0.0.1:3220**, separate from deployed port 3210. `npm run dev` boots three services: this runtime on 3220, Next on 3221, and the chart service on 8020, separate from the deployed host. See [CONTRIBUTING](../../CONTRIBUTING.md).
 
 ## Model setup
 
@@ -13,7 +13,7 @@ OPENCODE_API_KEY=your-opencode-zen-key
 
 DeepSeek V4 Flash is the selected model. Restart after configuration changes. Keep the file mode 600 and never add a `VITE_` prefix to a secret. The server registers the key with its isolated OpenCode integration; it never reaches the browser bundle.
 
-The deployed instance reads private `shared/.env.local` and stores databases under `shared/runtime` outside release directories. The development instance has its own `.runtime-dev`. `npm start` launches all three services: the Next app on `PORT` (default 3210), this runtime on `RUNTIME_PORT` (default 3211, loopback), and the chart service on `COMPUTE_PORT` (default 8001, loopback); do not run it alongside the deployed host. The launcher supports `IKTARA_ENV_FILE`, `IKTARA_RUNTIME_DIR`, `PORT`, `RUNTIME_PORT`, and `COMPUTE_PORT`. The web app's `/api/*` rewrite targets port 3211 and is baked at build time, so keep `RUNTIME_PORT` at 3211 (override only for emergencies, together with a rebuilt web app that targets the same port).
+The deployed instance reads private `shared/.env.local` and stores databases under `shared/runtime` outside release directories. The development instance has its own `.runtime-dev`. `npm start` launches the runtime on `PORT` (default 3210), Next.js on `WEB_PORT` (default 3211), and chart compute on `COMPUTE_PORT` (default 8001). All bind to loopback; the tunnel routes public requests through the runtime, which serves `/api/*` and proxies pages to Next.js. `npm run dev` from the root uses 3220/3221/8020, separate from production. No API rewrite or secret is baked into the frontend build.
 
 ## World and runtime
 

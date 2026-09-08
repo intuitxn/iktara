@@ -12,6 +12,10 @@ uv sync --frozen --python 3.12
 cd ../apps/local
 npm ci
 npm run build
+cd ../web
+corepack pnpm install --frozen-lockfile
+corepack pnpm build
+cd ../local
 npm start
 ```
 
@@ -21,12 +25,12 @@ Open **http://127.0.0.1:3210**. No Google sign-in, email login, subscription, or
 
 | Piece | Responsibility |
 | --- | --- |
-| `apps/local/src` | React interface for server-owned anonymous browser workspaces |
+| `apps/web/app` | Original AstroPersonalised glass UI connected to owned anonymous browser workspaces |
 | `apps/local/server` | Owned profiles/charts/history, durable jobs, page agents, OpenCode v2 plugin |
 | `shastra-compute/src/local_app.py` | Local chart and original-engine evidence service using Swiss Ephemeris |
 | `apps/local/scripts/start.mjs` | Starts and stops the local services together |
 
-The product API binds to loopback on port 3210; chart computation binds to loopback on 8001 with a per-run service key. OpenCode is an embedded runtime, not a public coding-agent endpoint. Its configuration/state are separate from the operator's personal harness. Model credentials stay on the server.
+The product API serves public traffic through the tunnel on loopback port 3210 and proxies pages to Next.js on 3211; chart computation binds to loopback on 8001 with a per-run service key. OpenCode is an embedded runtime, not a public coding-agent endpoint. Its configuration/state are separate from the operator's personal harness. Model credentials stay on the server.
 
 The SDK/plugin development release is pinned. DeepSeek V4 Flash through OpenCode Zen is the selected model. The public host at `forsee.life` runs its separately verified active revision. A contributor branch or local build is not a deployment receipt.
 
@@ -42,7 +46,7 @@ Reviewed main commits that pass CI are built and health-checked by the host's ba
 
 ## Upstream application
 
-`apps/web`, `convex`, `apps/email-service`, and the original Python reading routes preserve the earlier Cloudflare/Convex application for reference. They are not launched by the local product. Original tag deployment workflows are restricted to the upstream repository; the Intuitxn copy validates the local app instead.
+`apps/web` restores the original AstroPersonalised presentation using the new product API. `convex`, `apps/email-service`, and the original Python reading routes remain upstream reference sources and are not launched by the local product. Original tag deployment workflows are restricted to the upstream repository; the Intuitxn copy validates the local app instead.
 
 ## Team
 
