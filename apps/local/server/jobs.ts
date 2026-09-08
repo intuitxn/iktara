@@ -2,11 +2,10 @@ import type { ChatInput } from "./prompts.js";
 import type { WorkspaceStore } from "./workspace.js";
 import { resolveEvidenceReferences, ReadingError } from "./evidence.js";
 
-/** Single local worker. Accepted jobs and replies survive browser disconnects. */
+/** Bounded workers. Accepted jobs and replies survive browser disconnects. */
 export class JobWorker {
-  private running = false;
   private stopped = false;
-  private task: Promise<void> | undefined;
+  private tasks = new Set<Promise<void>>();
   constructor(
     private store: WorkspaceStore,
     private respond: (
@@ -17,12 +16,13 @@ export class JobWorker {
     private prepare: (input: ChatInput) => Promise<void> = async () => {},
   ) {}
   wake() {
-    if (this.running || this.stopped) return;
-    this.running = true;
-    this.task = this.drain().finally(() => {
-      this.running = false;
-    });
+    if (this.stopped) return;
+    while (this.tasks.size < 2) {
+      const task = this.drain().finally(() => this.tasks.delete(task));
+      this.tasks.add(task);
+    }
   }
+
   private async drain() {
     while (!this.stopped) {
       const job = this.store.claim();
@@ -50,6 +50,6 @@ export class JobWorker {
   }
   async stop() {
     this.stopped = true;
-    await this.task;
+    await Promise.all(this.tasks);
   }
 }

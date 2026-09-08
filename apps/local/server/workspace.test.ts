@@ -205,3 +205,41 @@ test("reading lenses require saved birth details and a calculated chart; reflect
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("a slow reading does not block a second workspace and concurrency stays bounded", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "iktara-concurrent-test-"));
+  const store = new WorkspaceStore(path.join(root, "test.sqlite"));
+  const releases: Array<() => void> = [];
+  const started: string[] = [];
+  let active = 0;
+  let peak = 0;
+  const worker = new JobWorker(store, async (_input, owner) => {
+    started.push(owner);
+    peak = Math.max(peak, ++active);
+    await new Promise<void>((resolve) => releases.push(resolve));
+    active--;
+    return "Owned answer";
+  });
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+  try {
+    const people = Array.from({ length: 3 }, () => store.createIdentity());
+    const jobs = people.map(({ owner }, i) => store.enqueue(owner, "reflection", "Synthetic question", `request-${i}`));
+    worker.wake();
+    worker.wake();
+    for (let i = 0; i < 30 && started.length < 2; i++) await tick();
+    assert.equal(started.length, 2);
+    assert.equal(store.getJob(people[2].owner, jobs[2].id)?.status, "pending");
+    releases[1]();
+    for (let i = 0; i < 30 && started.length < 3; i++) await tick();
+    assert.equal(started.length, 3);
+    assert.equal(store.getJob(people[0].owner, jobs[0].id)?.status, "running");
+    assert.equal(store.getJob(people[1].owner, jobs[1].id)?.status, "completed");
+    assert.equal(store.getJob(people[0].owner, jobs[1].id), null);
+    assert.equal(peak, 2);
+  } finally {
+    releases.forEach((release) => release());
+    await worker.stop();
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});

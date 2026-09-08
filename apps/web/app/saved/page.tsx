@@ -9,7 +9,6 @@ import { Button, Card } from "@/app/components/ui";
 export default function SavedPage() {
   const [messages, setMessages] = useState<Message[]>([]);
   const [loaded, setLoaded] = useState(false);
-  const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -25,29 +24,6 @@ export default function SavedPage() {
       )
       .finally(() => setLoaded(true));
   }, []);
-
-  async function reset() {
-    if (
-      !window.confirm(
-        "Delete the birth details, chart, and conversations in this workspace?",
-      )
-    )
-      return;
-    setBusy(true);
-    setError("");
-    try {
-      await runtimeApi.reset();
-      setMessages([]);
-    } catch (failure) {
-      setError(
-        failure instanceof Error
-          ? failure.message
-          : "Your data could not be cleared.",
-      );
-    } finally {
-      setBusy(false);
-    }
-  }
 
   return (
     <section className="page-frame">
@@ -98,11 +74,7 @@ export default function SavedPage() {
           <Button href="/chat" variant="primary">
             New reading
           </Button>
-          {loaded && !error && (
-            <Button variant="ghost" onClick={reset} disabled={busy}>
-              {busy ? "Clearing…" : "Reset workspace"}
-            </Button>
-          )}
+
         </div>
         <p className="muted">
           Your recent questions and answers are saved on the server for this browser workspace (up to 100 messages shown). Clearing

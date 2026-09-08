@@ -6,9 +6,11 @@
   "publicUrl": "https://forsee.life",
   "changes": [
     "Open directly into chat with reflection before birth details and chart-grounded readings after setup",
-    "Use a quiet reading layout, compact icon navigation and separate Answer, Sources and Details views",
+    "Use the original sky-blue glass appearance, compact icon navigation and separate Answer, Sources and Details views",
     "Write personal answers in connected prose with evidence links and a follow-up question",
-    "Simplify birth-time input and show both reflection and astrology answers in conversation history"
+    "Simplify birth-time input and show both reflection and astrology answers in conversation history",
+    "Restore the original sky-blue glass colors and remove the public reset-workspace control",
+    "Avoid duplicate raw chart context during inference and process up to two queued requests concurrently"
   ],
   "decisionLinks": [],
   "limitations": [
