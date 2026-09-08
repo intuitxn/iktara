@@ -1,11 +1,10 @@
 "use client";
 
 import { useEffect, useState, type FormEvent } from "react";
-import {
-  EMPTY_PROFILE,
-  runtimeApi,
-  type Profile,
-} from "@/app/lib/runtimeApi";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import GalaxyLogo from "@/app/components/GalaxyLogo";
+import { EMPTY_PROFILE, runtimeApi, type Profile } from "@/app/lib/runtimeApi";
 import { Button, Card, Field, Select } from "@/app/components/ui";
 
 const QUALITY_OPTIONS = [
@@ -15,6 +14,7 @@ const QUALITY_OPTIONS = [
 ];
 
 export default function OnboardingPage() {
+  const router = useRouter();
   const [name, setName] = useState("");
   const [dob, setDob] = useState("");
   const [tob, setTob] = useState("");
@@ -23,7 +23,6 @@ export default function OnboardingPage() {
   const [birthplace, setBirthplace] = useState("");
   const [loaded, setLoaded] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
   useEffect(() => {
@@ -62,53 +61,74 @@ export default function OnboardingPage() {
       date_of_birth: dob,
       time_of_birth: unknownTime ? null : tob,
       birthplace,
-      birth_time_quality: unknownTime ? "unknown" : (quality as Profile["birth_time_quality"]),
+      birth_time_quality: unknownTime
+        ? "unknown"
+        : (quality as Profile["birth_time_quality"]),
     };
     try {
       await runtimeApi.saveProfile(profile);
-      setSaved(true);
+      await runtimeApi.computeChart(profile);
+      router.push("/chat");
     } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Could not save your birth details.");
+      setError(
+        failure instanceof Error
+          ? failure.message
+          : "Could not save your birth details.",
+      );
     } finally {
       setBusy(false);
     }
   }
 
-  if (saved) {
-    return (
-      <section>
-        <h1 className="page-title">Your birth details</h1>
-        <Card>
-          <p>Saved. Your details are ready for the chart.</p>
-          <div className="row">
-            <Button href="/chart" variant="primary">
-              Continue to your chart
-            </Button>
-            <Button href="/chat" variant="ghost">
-              Go to chat
-            </Button>
-          </div>
-        </Card>
-      </section>
-    );
-  }
-
   return (
-    <section>
+    <section className="page-frame">
+      <Link href="/chat" className="text-sm text-accent">
+        ← Back to Iktara
+      </Link>
+      <div className="mt-6">
+        <GalaxyLogo size={56} />
+      </div>
       <h1 className="page-title">Your birth details</h1>
-      <p className="muted">No account needed. Your details stay in this private session.</p>
+      <p className="muted mb-6">
+        A few details to map your sky. No account needed.
+      </p>
       <Card>
         <form onSubmit={submit}>
           <Field label="Name (optional)" htmlFor="name">
-            <input id="name" value={name} maxLength={80} onChange={(e) => setName(e.target.value)} disabled={busy} />
+            <input
+              id="name"
+              value={name}
+              maxLength={80}
+              onChange={(e) => setName(e.target.value)}
+              disabled={busy}
+            />
           </Field>
           <Field label="Birth date" htmlFor="dob">
-            <input id="dob" type="date" required value={dob} onChange={(e) => setDob(e.target.value)} disabled={busy} />
+            <input
+              id="dob"
+              type="date"
+              max={new Date().toLocaleDateString("en-CA")}
+              required
+              value={dob}
+              onChange={(e) => setDob(e.target.value)}
+              disabled={busy}
+            />
           </Field>
           <Field label="Birth time" htmlFor="tob">
-            <input id="tob" type="time" value={tob} disabled={busy || unknownTime} onChange={(e) => setTob(e.target.value)} />
+            <input
+              id="tob"
+              type="time"
+              value={tob}
+              disabled={busy || unknownTime}
+              onChange={(e) => setTob(e.target.value)}
+            />
             <label className="check-row">
-              <input type="checkbox" checked={unknownTime} disabled={busy} onChange={(e) => setUnknownTime(e.target.checked)} />
+              <input
+                type="checkbox"
+                checked={unknownTime}
+                disabled={busy}
+                onChange={(e) => setUnknownTime(e.target.checked)}
+              />
               I don&apos;t know my birth time
             </label>
           </Field>
@@ -128,12 +148,30 @@ export default function OnboardingPage() {
             />
           </Field>
           <Field label="Birthplace" htmlFor="place">
-            <input id="place" required value={birthplace} placeholder="City, country" maxLength={200} onChange={(e) => setBirthplace(e.target.value)} disabled={busy} />
+            <input
+              id="place"
+              required
+              value={birthplace}
+              placeholder="City, country"
+              maxLength={200}
+              onChange={(e) => setBirthplace(e.target.value)}
+              disabled={busy}
+            />
+            <p className="text-xs text-text-secondary">
+              Include the state and country to distinguish places with the same
+              name.
+            </p>
           </Field>
           {error && <p className="error">{error}</p>}
           <Button type="submit" disabled={busy || !loaded}>
-            {busy ? "Saving…" : "Save details"}
+            {busy ? "Calculating your chart…" : "Create my chart"}
           </Button>
+          <p className="mt-5 text-xs text-text-secondary leading-relaxed">
+            Your birthplace is looked up to calculate the chart. Questions and
+            relevant chart context go to the AI provider for your reading. Your
+            workspace is stored on this server and accessed through this
+            browser.
+          </p>
         </form>
       </Card>
     </section>

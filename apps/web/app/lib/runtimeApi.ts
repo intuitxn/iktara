@@ -1,5 +1,4 @@
-// Typed client for the Iktara runtime API. The app is served from the same
-// origin; next.config.ts rewrites /api/* to http://127.0.0.1:3211/api/*.
+// Typed client for the same-origin Iktara runtime, which proxies pages to Next.js.
 // The runtime sets the iktara_session cookie, so fetches use
 // credentials: "include" to keep the workspace scoped.
 export type Profile = {
@@ -11,9 +10,19 @@ export type Profile = {
 };
 export type ReadingMethod = "vedic" | "kp" | "western" | "compare";
 export type ReadingDomain =
-  | "general" | "career" | "relationships" | "marriage" | "family"
-  | "money" | "health" | "purpose" | "personality" | "education"
-  | "spirituality" | "timing" | "compatibility";
+  | "general"
+  | "career"
+  | "relationships"
+  | "marriage"
+  | "family"
+  | "money"
+  | "health"
+  | "purpose"
+  | "personality"
+  | "education"
+  | "spirituality"
+  | "timing"
+  | "compatibility";
 export type EvidenceItem = {
   id: string;
   system: string;
@@ -62,12 +71,23 @@ export type Workspace = {
   chart: ChartResult | null;
   messages: Message[];
   worlds: World[];
+  jobs: Job[];
 };
 export const METHODS: ReadingMethod[] = ["vedic", "kp", "western", "compare"];
 export const DOMAINS: ReadingDomain[] = [
-  "general", "career", "relationships", "marriage", "family", "money",
-  "health", "purpose", "personality", "education", "spirituality",
-  "timing", "compatibility",
+  "general",
+  "career",
+  "relationships",
+  "marriage",
+  "family",
+  "money",
+  "health",
+  "purpose",
+  "personality",
+  "education",
+  "spirituality",
+  "timing",
+  "compatibility",
 ];
 export const EMPTY_PROFILE: Profile = {
   name: "",
@@ -88,7 +108,10 @@ async function api<T>(url: string, method = "GET", body?: unknown): Promise<T> {
     method,
     credentials: "include",
     ...(body !== undefined
-      ? { headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) }
+      ? {
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        }
       : {}),
   });
   const result = await response.json().catch(() => ({}));
@@ -103,9 +126,12 @@ async function api<T>(url: string, method = "GET", body?: unknown): Promise<T> {
 }
 export const runtimeApi = {
   workspace: () => api<Workspace>("/api/workspace"),
-  saveProfile: (profile: Profile) => api<Workspace>("/api/profile", "PUT", { profile }),
-  computeChart: (profile: Profile) => api<ChartResult>("/api/chart", "POST", { profile }),
-  chat: (input: ChatInput) => api<{ jobId: string }>("/api/chat", "POST", input),
+  saveProfile: (profile: Profile) =>
+    api<Workspace>("/api/profile", "PUT", { profile }),
+  computeChart: (profile: Profile) =>
+    api<ChartResult>("/api/chart", "POST", { profile }),
+  chat: (input: ChatInput) =>
+    api<{ jobId: string }>("/api/chat", "POST", input),
   job: (id: string) => api<Job>(`/api/jobs/${id}`),
   reset: () => api<{ ok: boolean }>("/api/workspace", "DELETE"),
 };

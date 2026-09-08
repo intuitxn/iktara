@@ -30,4 +30,4 @@ Only trusted changes merged into `main` run on the product host. Public pull req
 
 ## What lives where
 
-UI and browser interactions belong in `apps/local/src`. Product worlds, agents, jobs, and workspace APIs belong in `apps/local/server`. Deterministic chart calculations belong in `shastra-compute`. Human decisions and reviewed updates belong in Telepathy/Buzz. User conversations and keys belong in private host state, never in the repository.
+The public UI and browser interactions belong in `apps/web/app`; `apps/local/src` is the retained local-only interface. Build apps/web with `corepack pnpm --dir apps/web build` before running the contributor preview. Product worlds, agents, jobs, and workspace APIs belong in `apps/local/server`. Deterministic chart calculations belong in `shastra-compute`. Human decisions and reviewed updates belong in Telepathy/Buzz. User conversations and keys belong in private host state, never in the repository.

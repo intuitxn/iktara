@@ -1,15 +1,15 @@
 {
   "product": "Iktara",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "model": "opencode/deepseek-v4-flash",
   "runtime": "opencode-v2",
   "publicUrl": "https://forsee.life",
   "changes": [
-    "Restored the prior product UI (simplified Next.js pages: landing, onboarding, chart, chat, saved) as the public front",
-    "Backend agent runtime: per-user OpenCode v2 server with original Vedic/KP/Western/Compare engine evidence",
-    "Three-service deployment: public runtime proxies pages to the web app; chart service stays loopback",
-    "Removed Convex, Polar, PostHog, auth walls and heavy reading components from the web app",
-    "Health checks now cover web, chart and model readiness; candidate smoke boots are port-isolated"
+    "Restore AstroPersonalised sky-blue glass UI, original logo, landing and detailed chart views",
+    "Connect question-first readings, all four lenses, numbered source links, follow-ups and saved answers to the owned OpenCode runtime",
+    "Recover pending readings after reload and preserve questions for explicit retry",
+    "Resolve short model citation labels to exact immutable evidence IDs; retain the original engines and complete private evidence",
+    "Label birth-period dasha accurately and hide houses/ascendant for unknown birth time"
   ],
   "decisionLinks": [],
   "limitations": [

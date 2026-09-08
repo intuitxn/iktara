@@ -9,6 +9,7 @@ const child = spawn(process.execPath, ["scripts/start.mjs"], {
   env: {
     ...process.env,
     PORT: "3220",
+    WEB_PORT: "3221",
     COMPUTE_PORT: "8020",
     IKTARA_RUNTIME_DIR: path.join(app, ".runtime-dev"),
   },

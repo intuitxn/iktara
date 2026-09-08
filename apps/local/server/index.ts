@@ -1,3 +1,4 @@
+import { modelEvidence } from "./evidence.js";
 import {
   createServer,
   type IncomingMessage,
@@ -22,7 +23,13 @@ import {
 } from "./workspace.js";
 import { JobWorker } from "./jobs.js";
 import { isWorld, publicWorlds } from "./worlds.js";
-import { DOMAINS, METHODS, prepareEvidence, type Domain, type Method } from "./evidence.js";
+import {
+  DOMAINS,
+  METHODS,
+  prepareEvidence,
+  type Domain,
+  type Method,
+} from "./evidence.js";
 import { agentToolSessions } from "./agent-tools.js";
 
 const port = Number(process.env.PORT || 3210);
@@ -51,12 +58,25 @@ const store = new WorkspaceStore(
 );
 store.recoverInterrupted();
 const worker = new JobWorker(store, (input, owner, jobId) =>
-  chat(input, { workspaceKey: owner, ...(input.page === "chart" ? { evidence: async () => {
-    if (store.getJob(owner, jobId)?.status !== "running") throw new Error("Reading ended");
-    await prepareEvidence(input, computeUrl, process.env.COMPUTE_API_KEY || "");
-    if (store.getJob(owner, jobId)?.status !== "running") throw new Error("Reading ended");
-    return input.evidence;
-  } } : {}) }),
+  chat(input, {
+    workspaceKey: owner,
+    ...(input.page === "chart"
+      ? {
+          evidence: async () => {
+            if (store.getJob(owner, jobId)?.status !== "running")
+              throw new Error("Reading ended");
+            await prepareEvidence(
+              input,
+              computeUrl,
+              process.env.COMPUTE_API_KEY || "",
+            );
+            if (store.getJob(owner, jobId)?.status !== "running")
+              throw new Error("Reading ended");
+            return modelEvidence(input.evidence!);
+          },
+        }
+      : {}),
+  }),
 );
 const cookieName = "iktara_session";
 class HttpError extends WorkspaceError {}
@@ -213,7 +233,8 @@ async function proxyToWeb(
     headers[name] = Array.isArray(value) ? value.join(", ") : value;
   }
   headers["x-forwarded-host"] = request.headers.host || "";
-  headers["x-forwarded-proto"] = publicOrigin?.protocol.replace(":", "") || "http";
+  headers["x-forwarded-proto"] =
+    publicOrigin?.protocol.replace(":", "") || "http";
   let upstream: Response;
   try {
     upstream = await fetch(target, {
@@ -222,7 +243,9 @@ async function proxyToWeb(
       signal: AbortSignal.timeout(60_000),
     });
   } catch {
-    json(response, 502, { error: "The page service is unavailable. Please try again shortly." });
+    json(response, 502, {
+      error: "The page service is unavailable. Please try again shortly.",
+    });
     return;
   }
   const responseHeaders: Record<string, string | number> = {};
@@ -325,8 +348,14 @@ const server = createServer(async (request, response) => {
         only(value, ["message", "page", "requestId", "method", "domain"]);
         const method = value.method ?? "compare";
         const domain = value.domain ?? "general";
-        if (!METHODS.includes(method as Method) || !DOMAINS.includes(domain as Domain))
-          throw new HttpError(400, "Choose a supported reading lens and topic.");
+        if (
+          !METHODS.includes(method as Method) ||
+          !DOMAINS.includes(domain as Domain)
+        )
+          throw new HttpError(
+            400,
+            "Choose a supported reading lens and topic.",
+          );
         if (
           typeof value.message !== "string" ||
           !value.message.trim() ||
@@ -373,7 +402,10 @@ const server = createServer(async (request, response) => {
         if (!profile.date_of_birth || !profile.birthplace)
           throw new HttpError(400, "Provide a birth date and birthplace.");
         if (profile.birth_time_quality !== "unknown" && !profile.time_of_birth)
-          throw new HttpError(400, "Enter a birth time or choose 'I do not know my birth time'.");
+          throw new HttpError(
+            400,
+            "Enter a birth time or choose 'I do not know my birth time'.",
+          );
         const upstream = await fetch(new URL("/v1/chart/compute", computeUrl), {
           method: "POST",
           headers: {
