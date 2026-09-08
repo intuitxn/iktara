@@ -55,7 +55,8 @@
     ".opencode/skills/astro-engine/SKILL.md",
     ".opencode/skills/product-runtime/SKILL.md",
     ".opencode/skills/project-context/SKILL.md",
-    "ops/DEPLOYMENT.md"
+    "ops/DEPLOYMENT.md",
+    "docs/handoffs/2026-09-08-om-chart-profile.md"
   ],
   "workflow": {
     "develop": "npm run dev",

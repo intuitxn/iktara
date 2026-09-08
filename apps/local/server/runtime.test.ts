@@ -25,6 +25,12 @@ test("conversation values remain data and cannot break JSON boundaries", () => {
   assert.ok(IKTARA_PROMPT.includes("Do not invent a chart"));
 });
 
+test("chart inference uses tool evidence without duplicating the raw chart payload", () => {
+  const input = { page: "chart" as const, message: "A question", chart: { placements: "large raw chart" } };
+  assert.equal(JSON.parse(conversationPrompt(input)).chart, null);
+  assert.deepEqual(JSON.parse(conversationPrompt({ ...input, page: "reflection" })).chart, input.chart);
+});
+
 test("actual OpenCode v2 host initializes only the page agents and isolated config", async () => {
   const directory = await mkdtemp(path.join(tmpdir(), "iktara-sdk-test-"));
   process.env.IKTARA_RUNTIME_DIR = directory;

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { runtimeApi } from "@/app/lib/runtimeApi";
+import ChartGuide from "./ChartGuide";
+import { runtimeApi, type Profile } from "@/app/lib/runtimeApi";
 import type { CanonicalChart } from "@/app/types";
 import { ChevronLeft } from "lucide-react";
 import Link from "next/link";
@@ -72,6 +73,7 @@ function signOfDegree(deg: number): { sign: string; degree: number } {
 export default function ChartPage() {
   const router = useRouter();
   const [chart, setChart] = useState<CanonicalChart | null>(null);
+  const [profile, setProfile] = useState<Profile|null>(null);
   const [error, setError] = useState("");
   const [vedic, setVedic] = useState(true);
 
@@ -79,6 +81,7 @@ export default function ChartPage() {
     runtimeApi
       .workspace()
       .then((data) => {
+        setProfile(data.profile);
         if (!data.chart) router.replace("/onboarding");
         else setChart(data.chart.chart as unknown as CanonicalChart);
       })
@@ -130,13 +133,17 @@ export default function ChartPage() {
             <ChevronLeft className="h-5 w-5" />
           </Link>
           <h1 className="flex-1 text-lg font-semibold text-text-primary">
-            My Birth Chart
+            {profile?.name ? `${profile.name}’s birth chart` : "My birth chart"}
           </h1>
           {qualityBadge(chart.birth_time_quality)}
         </div>
       </div>
 
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6">
+      <div className="mx-auto max-w-3xl space-y-6 px-4 py-6 animate-fade-in">
+        <section className="glass-section p-5 flex flex-wrap items-center justify-between gap-4">
+          <div><p className="text-xs text-accent font-medium">{profile?.username ? `@${profile.username}` : "Your personal sky"}</p><p className="mt-1 font-semibold">{profile?.name || "Your birth profile"}</p><p className="text-xs text-text-secondary mt-1">{profile?.date_of_birth} · {profile?.birthplace}</p></div>
+          <Link href="/onboarding" className="btn btn--ghost">Edit birth details</Link>
+        </section>
         {uncertainTime && (
           <p className="glass-section p-4 text-sm text-text-secondary">
             {unknownTime
@@ -201,6 +208,8 @@ export default function ChartPage() {
             />
           </div>
         </section>
+
+        <ChartGuide key={vedic ? "vedic" : "western"} method={vedic ? "vedic" : "western"} chart={chart as unknown as Record<string,unknown>}/>
 
         {/* Planetary Positions */}
         <section className="glass-section p-5">

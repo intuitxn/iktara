@@ -18,6 +18,7 @@ test("HTTP contract: workspace shape, profile save, chart compute, and reset", a
       if (url.pathname === "/health") return Response.json({ ok: true });
       if (url.pathname === "/v1/chart/compute") {
         const profile = (await request.json()) as Record<string, unknown>;
+        if (profile.birthplace === "Missing city") return Response.json({detail:{code:"PLACE_NOT_FOUND"}}, {status:400});
         assert.equal(profile.date_of_birth, "2000-01-01");
         return Response.json({
           chart: { synthetic: true, received: profile },
@@ -123,6 +124,12 @@ test("HTTP contract: workspace shape, profile save, chart compute, and reset", a
     assert.equal(computed.chart.synthetic, true);
     assert.equal(computed.display_name, "New Delhi");
     assert.equal(computed.timezone, "Asia/Kolkata");
+
+    const failed = await json({method:"POST",path:"/api/chart"} as RequestInit,{profile:{...profile,birthplace:"Missing city"}});
+    assert.equal(failed.status,400);
+    assert.match(((await failed.json()) as {error:string}).error,/couldn’t find/);
+    const preserved = await (await fetch(`${base}/api/workspace`,{headers:{Cookie:cookie}})).json() as {chart:{chart:{synthetic:boolean}}};
+    assert.equal(preserved.chart.chart.synthetic,true,"failed calculation preserves the saved chart");
 
     // The earlier bare-profile body stays accepted.
     const bare = await json(

@@ -23,7 +23,9 @@ export type ChatInput = {
 export function conversationPrompt(input: ChatInput): string {
   return JSON.stringify({
     profile: input.profile ?? null,
-    chart: input.chart ?? null,
+    // Chart readings get authoritative placements from chart_evidence. Sending
+    // the full raw chart as well duplicates context before the tool call.
+    chart: input.page === "chart" ? null : input.chart ?? null,
     conversation: input.history ?? [],
     currentMessage: input.message,
     selectedMethod: input.method ?? "compare",

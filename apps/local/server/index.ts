@@ -143,6 +143,8 @@ function profileValue(value: unknown): Profile {
   const data = value as Record<string, unknown>;
   only(data, [
     "name",
+    "username",
+    "location",
     "date_of_birth",
     "time_of_birth",
     "birthplace",
@@ -169,8 +171,24 @@ function profileValue(value: unknown): Profile {
     !["exact", "approximate", "unknown"].includes(String(birth_time_quality))
   )
     throw new HttpError(400, "Check your birth details and try again.");
+  let location: Profile["location"];
+  if (data.location !== undefined) {
+    const item = data.location as Record<string, unknown>;
+    if (!item || typeof item !== "object" || Array.isArray(item)) throw new HttpError(400, "Select your birthplace again.");
+    only(item, ["latitude", "longitude", "timezone", "display_name"]);
+    if (typeof item.latitude !== "number" || !Number.isFinite(item.latitude) || Math.abs(item.latitude) > 90 || typeof item.longitude !== "number" || !Number.isFinite(item.longitude) || Math.abs(item.longitude) > 180 || typeof item.timezone !== "string" || item.timezone.length > 80 || typeof item.display_name !== "string" || !item.display_name || item.display_name.length > 500) throw new HttpError(400, "Select your birthplace again.");
+    try { new Intl.DateTimeFormat("en", {timeZone:item.timezone}); } catch { throw new HttpError(400, "Select a birthplace with a valid timezone."); }
+    location = item as Profile["location"];
+  }
+  if (data.username !== undefined && (typeof data.username !== "string" || !/^[a-z][a-z0-9-]{2,29}$/.test(data.username))) throw new HttpError(400, "Use 3–30 lowercase letters, numbers or hyphens for your username.");
+  if (date_of_birth) {
+    const parsed = new Date(`${date_of_birth}T00:00:00Z`);
+    if (!Number.isFinite(parsed.getTime()) || parsed.toISOString().slice(0,10) !== date_of_birth || parsed.getTime() > Date.now()) throw new HttpError(400, "Enter a valid birth date that is not in the future.");
+  }
   return {
     name: name.trim(),
+    ...(data.username ? {username: data.username as string} : {}),
+    ...(location ? {location} : {}),
     date_of_birth,
     time_of_birth:
       birth_time_quality === "unknown" ? null : time_of_birth || null,
@@ -307,6 +325,16 @@ const server = createServer(async (request, response) => {
         worlds: publicWorlds(),
       });
     }
+    if (pathname === "/api/places" && request.method === "GET") {
+      const owner = identity(request, response);
+      limit(`places:${owner}`, 10);
+      const q = new URL(request.url!, "http://localhost").searchParams.get("q")?.trim() || "";
+      if (q.length < 2 || q.length > 200) throw new HttpError(400, "Enter a city, state and country.");
+      const url = new URL("/v1/places/search", computeUrl); url.searchParams.set("q",q);
+      const upstream = await fetch(url, {headers:{"X-API-Key":process.env.COMPUTE_API_KEY || ""},signal:AbortSignal.timeout(20_000)});
+      if (!upstream.ok) throw new HttpError(503, "Birthplace search is temporarily unavailable. Your details are kept; try again shortly.");
+      return json(response,200,await upstream.json());
+    }
     if (pathname.startsWith("/api/jobs/") && request.method === "GET") {
       const job = store.getJob(
         identity(request, response),
@@ -415,11 +443,15 @@ const server = createServer(async (request, response) => {
           body: JSON.stringify(profile),
           signal: AbortSignal.timeout(30_000),
         });
-        if (!upstream.ok)
-          throw new HttpError(
-            upstream.status < 500 ? 400 : 502,
-            "The chart could not be calculated. Check the birth details and try again.",
-          );
+        if (!upstream.ok) {
+          const failure = await upstream.json().catch(() => ({})) as {detail?: {code?: string}};
+          const code = failure.detail?.code;
+          const message = code === "PLACE_NOT_FOUND" ? "We couldn’t find that birthplace. Search for the city, state and country, then select a result."
+            : code === "PLACE_LOOKUP_UNAVAILABLE" ? "Birthplace search is temporarily unavailable. Your details are kept; try again shortly."
+            : upstream.status === 422 || code === "INVALID_BIRTH_DETAILS" ? "Check the birth date and local birth time. Use the unknown-time option if needed."
+            : "The chart service is temporarily unavailable. Your details are kept; please retry shortly.";
+          throw new HttpError(upstream.status < 500 ? 400 : 503, message);
+        }
         const result = (await upstream.json()) as ChartResult;
         if (!result.chart || typeof result.chart !== "object")
           throw new HttpError(
@@ -428,7 +460,7 @@ const server = createServer(async (request, response) => {
           );
         store.saveProfile(owner, profile, result);
         // Profile plus the calculated chart so the UI can render immediately.
-        return json(response, 200, { ...result, profile });
+        return json(response, 200, { ...result, profile: store.workspace(owner).profile });
       }
     }
     if (pathname.startsWith("/api/"))

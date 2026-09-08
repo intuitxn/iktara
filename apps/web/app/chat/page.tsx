@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Loader2 } from "lucide-react";
+import { Loader2, BriefcaseBusiness, Heart, Orbit, Sparkles } from "lucide-react";
 import { DOMAINS, isActiveJob, runtimeApi } from "@/app/lib/runtimeApi";
 import type {
   Job,
@@ -17,12 +17,12 @@ import Sidebar from "./components/Sidebar";
 import ReadingAnswer from "./components/ReadingAnswer";
 
 const EXAMPLES = [
-  { question: "What does my chart say about my career path?", topic: "career" },
-  { question: "What patterns shape my relationships?", topic: "relationships" },
-  { question: "Where do Vedic and Western readings agree?", topic: "general" },
+  { question: "What does my chart say about my career path?", topic: "career", Icon: BriefcaseBusiness },
+  { question: "What patterns shape my relationships?", topic: "relationships", Icon: Heart },
+  { question: "Where do Vedic and Western readings agree?", topic: "general", Icon: Orbit },
   {
     question: "What are my strongest planetary influences?",
-    topic: "personality",
+    topic: "personality", Icon: Sparkles,
   },
 ] as const;
 
@@ -48,7 +48,6 @@ export default function ChatPage() {
     // The API sends newest first, including row order for identical timestamps.
     setMessages(
       data.messages
-        .filter((m) => m.page === "chart")
         .slice()
         .reverse(),
     );
@@ -62,14 +61,14 @@ export default function ChatPage() {
         if (!alive.current) return;
         apply(data);
         const active = data.jobs.find(
-          (j) => j.page === "chart" && isActiveJob(j),
+          (j) => isActiveJob(j),
         );
         if (active) {
           setJob(active);
           if (active.method) setMethod(active.method);
           if (active.domain) setDomain(active.domain);
         } else {
-          const latest = data.jobs.find((j) => j.page === "chart");
+          const latest = data.jobs[0];
           if (latest?.status === "error") {
             setJob(latest);
             setError(
@@ -132,7 +131,8 @@ export default function ChatPage() {
   }, [messages.length, busy]);
 
   async function send(message: string, topic: ReadingDomain = domain) {
-    if (busy || submitLock.current || !workspace?.chart) return;
+    if (busy || submitLock.current || !workspace) return;
+    const page = workspace.chart ? "chart" : "reflection";
     submitLock.current = true;
     setSubmitting(true);
     setError("");
@@ -141,7 +141,7 @@ export default function ChatPage() {
     try {
       const result = await runtimeApi.chat({
         message,
-        page: "chart",
+        page,
         requestId: crypto.randomUUID(),
         method,
         domain: topic,
@@ -149,7 +149,7 @@ export default function ChatPage() {
       if (!alive.current) return;
       setJob({
         id: result.jobId,
-        page: "chart",
+        page,
         status: "pending",
         method,
         domain: topic,
@@ -170,7 +170,7 @@ export default function ChatPage() {
           if (alive.current) {
             apply(data);
             const active = data.jobs.find(
-              (j) => j.page === "chart" && isActiveJob(j),
+              (j) => isActiveJob(j),
             );
             if (active) setJob(active);
           }
@@ -182,9 +182,14 @@ export default function ChatPage() {
     }
   }
 
+  const examples = workspace?.chart ? EXAMPLES : [
+    {question:"How can I find more clarity in my career?", topic:"career" as const, Icon:BriefcaseBusiness},
+    {question:"Help me understand a relationship pattern.", topic:"relationships" as const, Icon:Heart},
+  ];
+
   const composer = (
     <div className="w-full">
-      <div className="flex justify-end items-center gap-2 mb-2 text-xs text-text-secondary">
+      <div hidden={!workspace?.chart} className={workspace?.chart ? "flex justify-end items-center gap-2 mb-2 text-xs text-text-secondary" : "hidden"}>
         <label htmlFor="reading-topic">Topic</label>
         <select
           id="reading-topic"
@@ -202,16 +207,17 @@ export default function ChatPage() {
       </div>
       <ChatInput
         onSubmit={send}
-        isLoading={busy || !loaded || !workspace?.chart}
+        isLoading={busy || !loaded || !workspace}
         method={method}
         onMethodChange={(m) => setMethod(m as ReadingMethod)}
         canCompare
+        hasChart={Boolean(workspace?.chart)}
         centered={!messages.length}
         draft={draft}
         onDraftChange={setDraft}
       />
       <p className="mt-3 text-center text-[11px] text-text-secondary">
-        Answers grounded in your chart · Interpretations, not guarantees
+        {workspace?.chart ? "Grounded in your birth chart · Interpretations, not guarantees" : "Start a conversation now. Add your birth chart for a personal astrology reading."}
       </p>
     </div>
   );
@@ -221,7 +227,6 @@ export default function ChatPage() {
       <Sidebar
         open={sidebarOpen}
         toggle={() => setSidebarOpen((o) => !o)}
-        messages={messages}
         onQuestion={() => {
           document.querySelector<HTMLTextAreaElement>("textarea")?.focus();
         }}
@@ -229,10 +234,10 @@ export default function ChatPage() {
       <main className="relative flex min-w-0 flex-1 flex-col overflow-hidden">
         <header className="flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/25 px-4 pl-16 lg:pl-6">
           <span className="text-sm text-text-secondary">
-            Personalized Astrology AI
+            iktara
           </span>
-          <Link className="text-xs text-accent" href="/chart">
-            My chart
+          <Link className="text-xs text-accent" href={workspace?.chart ? "/chart" : "/onboarding"}>
+            {workspace?.chart ? `${workspace.profile?.name || "Your"} · Birth chart` : "Add birth chart"}
           </Link>
         </header>
         {error && (
@@ -265,35 +270,24 @@ export default function ChatPage() {
         )}
         {!messages.length ? (
           <div className="flex min-h-0 flex-1 flex-col items-center justify-center overflow-y-auto px-4 py-8">
-            <GalaxyLogo size={120} />
+            <GalaxyLogo size={64} />
             <h1 className="mt-1 text-[28px] font-semibold tracking-tight text-center">
-              We all are Stardust!
+              {workspace?.profile?.name ? `What’s on your mind, ${workspace.profile.name}?` : "What would you like to understand?"}
             </h1>
             <p className="mt-2 mb-8 max-w-md text-center text-[15px] text-text-secondary leading-relaxed">
-              Ask anything about your life — explore it through your birth
-              chart.
+              A little more clarity, through conversation and your chart.
             </p>
-            {loaded && !workspace?.chart ? (
-              <div className="liquid-glass p-6 text-center max-w-xl">
-                <p className="text-sm text-text-secondary mb-4">
-                  Start with your birth details for a personalized reading
-                  across Vedic, KP and Western astrology.
-                </p>
-                <Link href="/onboarding" className="btn btn--primary">
-                  Create my birth chart
-                </Link>
-              </div>
-            ) : (
-              <div className="w-full max-w-xl">{composer}</div>
-            )}
+            <div className="w-full max-w-2xl">{composer}</div>
+            {loaded && !workspace?.chart && <Link href="/onboarding" className="mt-4 text-sm text-accent">Add birth details →</Link>}
             <div className="mt-6 grid w-full max-w-xl grid-cols-1 gap-2 sm:grid-cols-2">
-              {EXAMPLES.map((q) => (
+              {examples.map((q) => (
                 <button
                   key={q.question}
-                  disabled={busy || !workspace?.chart}
+                  disabled={busy || !workspace}
                   onClick={() => void send(q.question, q.topic)}
                   className="glass-card px-4 py-3 text-left text-sm text-text-secondary hover:text-accent"
                 >
+                  <q.Icon size={17} className="mb-2 text-accent" />
                   {q.question}
                 </button>
               ))}
@@ -306,8 +300,8 @@ export default function ChatPage() {
                 {messages.map((m) => (
                   <div id={`message-${m.id}`} key={m.id}>
                     {m.role === "user" ? (
-                      <div className="flex justify-end">
-                        <div className="user-bubble max-w-[85%] rounded-2xl rounded-tr-sm px-4 py-3 text-sm whitespace-pre-wrap break-words">
+                      <div>
+                        <div className="text-2xl font-medium leading-snug whitespace-pre-wrap break-words">
                           {m.content}
                         </div>
                       </div>
@@ -315,7 +309,7 @@ export default function ChatPage() {
                       <ReadingAnswer
                         message={m}
                         onFollowUp={(q) => void send(q)}
-                        disabled={busy || !workspace?.chart}
+                        disabled={busy || !workspace}
                       />
                     )}
                   </div>
@@ -329,7 +323,7 @@ export default function ChatPage() {
                     {reconnecting
                       ? "Reconnecting to your saved reading…"
                       : job?.status === "running"
-                        ? "Reading your chart evidence and preparing an answer…"
+                        ? "Preparing your answer…"
                         : "Your question is queued…"}
                   </div>
                 )}
@@ -338,13 +332,7 @@ export default function ChatPage() {
             </div>
             <div className="shrink-0 border-t border-white/30 bg-white/15 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur-xl">
               <div className="mx-auto max-w-2xl">
-                {workspace?.chart ? (
-                  composer
-                ) : (
-                  <Link href="/onboarding" className="btn btn--primary">
-                    Update your birth chart to continue
-                  </Link>
-                )}
+                {composer}
               </div>
             </div>
           </>

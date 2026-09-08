@@ -205,3 +205,61 @@ test("reading lenses require saved birth details and a calculated chart; reflect
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("a slow reading does not block a second workspace and concurrency stays bounded", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "iktara-concurrent-test-"));
+  const store = new WorkspaceStore(path.join(root, "test.sqlite"));
+  const releases: Array<() => void> = [];
+  const started: string[] = [];
+  let active = 0;
+  let peak = 0;
+  const worker = new JobWorker(store, async (_input, owner) => {
+    started.push(owner);
+    peak = Math.max(peak, ++active);
+    await new Promise<void>((resolve) => releases.push(resolve));
+    active--;
+    return "Owned answer";
+  });
+  const tick = () => new Promise((resolve) => setTimeout(resolve, 5));
+  try {
+    const people = Array.from({ length: 3 }, () => store.createIdentity());
+    const jobs = people.map(({ owner }, i) => store.enqueue(owner, "reflection", "Synthetic question", `request-${i}`));
+    worker.wake();
+    worker.wake();
+    for (let i = 0; i < 30 && started.length < 2; i++) await tick();
+    assert.equal(started.length, 2);
+    assert.equal(store.getJob(people[2].owner, jobs[2].id)?.status, "pending");
+    releases[1]();
+    for (let i = 0; i < 30 && started.length < 3; i++) await tick();
+    assert.equal(started.length, 3);
+    assert.equal(store.getJob(people[0].owner, jobs[0].id)?.status, "running");
+    assert.equal(store.getJob(people[1].owner, jobs[1].id)?.status, "completed");
+    assert.equal(store.getJob(people[0].owner, jobs[1].id), null);
+    assert.equal(peak, 2);
+  } finally {
+    releases.forEach((release) => release());
+    await worker.stop();
+    store.close();
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("chart completion awards an owned username; renaming preserves calculations and collisions are atomic", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "iktara-handle-test-"));
+  const store = new WorkspaceStore(path.join(root, "test.sqlite"));
+  try {
+    const a=store.createIdentity(), b=store.createIdentity();
+    const chart={chart:{synthetic:true},display_name:"Synthetic",timezone:"UTC"};
+    store.saveProfile(a.owner,profile,chart);
+    const saved=store.workspace(a.owner).profile!;
+    assert.match(saved.username!,/^stargazer-[a-f0-9]{10}$/);
+    store.saveProfile(a.owner,{...saved,username:"moon-mira",name:"Mira"});
+    assert.deepEqual(store.workspace(a.owner).chart,chart);
+    assert.equal(store.workspace(a.owner).profile?.username,"moon-mira");
+    assert.throws(()=>store.saveProfile(b.owner,{...profile,username:"moon-mira"},chart),/taken/);
+    assert.equal(store.workspace(b.owner).profile,null);
+    store.reset(a.owner);
+    store.saveProfile(b.owner,{...profile,username:"moon-mira"},chart);
+    assert.equal(store.workspace(b.owner).profile?.username,"moon-mira");
+  } finally { store.close(); await rm(root,{recursive:true,force:true}); }
+});
