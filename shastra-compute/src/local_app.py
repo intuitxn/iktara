@@ -1,10 +1,12 @@
 """Local chart and original-engine evidence service; no model inference."""
 
 from fastapi import FastAPI
+from src.api.v1.local_chart import router as local_chart_router
 from src.api.v1.chart import router
 from src.api.v1.evidence import router as evidence_router
 
 app = FastAPI(title="Iktara chart service", version="0.1.0")
+app.include_router(local_chart_router)
 app.include_router(router)
 app.include_router(evidence_router)
 

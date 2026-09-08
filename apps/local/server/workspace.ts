@@ -8,6 +8,8 @@ import type { WorldID } from "./worlds.js";
 import type { Domain, EvidenceBundle, Method } from "./evidence.js";
 
 export type Profile = {
+  username?: string;
+  location?: { latitude: number; longitude: number; timezone: string; display_name: string };
   name: string;
   date_of_birth: string;
   time_of_birth: string | null;
@@ -81,6 +83,7 @@ export class WorkspaceStore {
       CREATE TABLE IF NOT EXISTS people (
         id TEXT PRIMARY KEY, profile TEXT, chart TEXT, created_at INTEGER NOT NULL
       );
+      CREATE TABLE IF NOT EXISTS handles (owner TEXT PRIMARY KEY REFERENCES people(id) ON DELETE CASCADE, username TEXT NOT NULL UNIQUE);
       CREATE TABLE IF NOT EXISTS browser_sessions (
         token_hash TEXT PRIMARY KEY, owner TEXT NOT NULL REFERENCES people(id) ON DELETE CASCADE,
         expires_at INTEGER NOT NULL
@@ -144,7 +147,7 @@ export class WorkspaceStore {
     if (!row)
       throw new WorkspaceError(401, "Open your workspace again to continue.");
     return {
-      profile: row.profile ? (JSON.parse(row.profile) as Profile) : null,
+      profile: row.profile ? { ...(JSON.parse(row.profile) as Profile), ...this.handle(owner) } : null,
       chart: row.chart ? (JSON.parse(row.chart) as ChartResult) : null,
       messages: this.db
         .query<Message, [string]>(
@@ -159,30 +162,46 @@ export class WorkspaceStore {
     };
   }
 
+  private handle(owner: string): { username?: string } {
+    return this.db.query<{username:string}, [string]>("SELECT username FROM handles WHERE owner=?").get(owner) || {};
+  }
+
   saveProfile(
     owner: string,
     profile: Profile | null,
     chart?: ChartResult | null,
   ) {
+    this.db.transaction(() => {
+    if (profile && (profile.username || chart)) {
+      const username = profile.username || this.handle(owner).username || `stargazer-${randomBytes(5).toString("hex")}`;
+      if (!/^[a-z][a-z0-9-]{2,29}$/.test(username)) throw new WorkspaceError(400, "Use 3–30 lowercase letters, numbers or hyphens for your username.");
+      const used = this.db.query<{owner:string},[string]>("SELECT owner FROM handles WHERE username=?").get(username);
+      if (used && used.owner !== owner) throw new WorkspaceError(409, "That username is taken. Choose another.");
+      this.db.query("INSERT INTO handles(owner,username) VALUES(?,?) ON CONFLICT(owner) DO UPDATE SET username=excluded.username").run(owner, username);
+      profile = { ...profile, username };
+    }
     // A changed birth profile invalidates the old chart. Charts only come from compute.
     const old = this.db
       .query<UserRow, [string]>("SELECT profile,chart FROM people WHERE id=?")
       .get(owner);
     const encoded = profile ? JSON.stringify(profile) : null;
+    const calculationKey = (value: Profile | null) => value ? JSON.stringify({date:value.date_of_birth,time:value.time_of_birth,quality:value.birth_time_quality,place:value.birthplace,location:value.location}) : null;
     const chartJson =
-      chart === undefined && old?.profile === encoded
-        ? old.chart
+      chart === undefined && calculationKey(old?.profile ? JSON.parse(old.profile) : null) === calculationKey(profile)
+        ? old?.chart ?? null
         : chart
           ? JSON.stringify(chart)
           : null;
     this.db
       .query("UPDATE people SET profile=?,chart=? WHERE id=?")
       .run(encoded, chartJson, owner);
+    })();
   }
 
   reset(owner: string) {
     this.db.transaction(() => {
       this.db.query("DELETE FROM jobs WHERE owner=?").run(owner);
+      this.db.query("DELETE FROM handles WHERE owner=?").run(owner);
       this.db
         .query("UPDATE people SET profile=NULL,chart=NULL WHERE id=?")
         .run(owner);

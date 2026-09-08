@@ -1,7 +1,10 @@
 // Typed client for the same-origin Iktara runtime, which proxies pages to Next.js.
 // The runtime sets the iktara_session cookie, so fetches use
 // credentials: "include" to keep the workspace scoped.
+export type BirthLocation = { latitude: number; longitude: number; timezone: string; display_name: string };
 export type Profile = {
+  username?: string;
+  location?: BirthLocation;
   name: string;
   date_of_birth: string;
   time_of_birth: string | null;
@@ -30,6 +33,7 @@ export type EvidenceItem = {
   detail: unknown;
 };
 export type ReadingEvidence = {
+  chart_snapshot?: Record<string, unknown>;
   id: string;
   method: string;
   domain: string;
@@ -61,6 +65,7 @@ export type Job = {
   domain?: ReadingDomain;
 };
 export type ChartResult = {
+  profile?: Profile;
   chart: Record<string, unknown>;
   display_name: string;
   timezone: string;
@@ -125,6 +130,7 @@ async function api<T>(url: string, method = "GET", body?: unknown): Promise<T> {
   return result as T;
 }
 export const runtimeApi = {
+  places: (query: string) => api<{places: BirthLocation[]}>(`/api/places?q=${encodeURIComponent(query)}`),
   workspace: () => api<Workspace>("/api/workspace"),
   saveProfile: (profile: Profile) =>
     api<Workspace>("/api/profile", "PUT", { profile }),

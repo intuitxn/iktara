@@ -243,3 +243,23 @@ test("a slow reading does not block a second workspace and concurrency stays bou
     await rm(root, { recursive: true, force: true });
   }
 });
+
+test("chart completion awards an owned username; renaming preserves calculations and collisions are atomic", async () => {
+  const root = await mkdtemp(path.join(tmpdir(), "iktara-handle-test-"));
+  const store = new WorkspaceStore(path.join(root, "test.sqlite"));
+  try {
+    const a=store.createIdentity(), b=store.createIdentity();
+    const chart={chart:{synthetic:true},display_name:"Synthetic",timezone:"UTC"};
+    store.saveProfile(a.owner,profile,chart);
+    const saved=store.workspace(a.owner).profile!;
+    assert.match(saved.username!,/^stargazer-[a-f0-9]{10}$/);
+    store.saveProfile(a.owner,{...saved,username:"moon-mira",name:"Mira"});
+    assert.deepEqual(store.workspace(a.owner).chart,chart);
+    assert.equal(store.workspace(a.owner).profile?.username,"moon-mira");
+    assert.throws(()=>store.saveProfile(b.owner,{...profile,username:"moon-mira"},chart),/taken/);
+    assert.equal(store.workspace(b.owner).profile,null);
+    store.reset(a.owner);
+    store.saveProfile(b.owner,{...profile,username:"moon-mira"},chart);
+    assert.equal(store.workspace(b.owner).profile?.username,"moon-mira");
+  } finally { store.close(); await rm(root,{recursive:true,force:true}); }
+});

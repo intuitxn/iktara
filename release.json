@@ -10,12 +10,16 @@
     "Write personal answers in connected prose with evidence links and a follow-up question",
     "Simplify birth-time input and show both reflection and astrology answers in conversation history",
     "Restore the original sky-blue glass colors and remove the public reset-workspace control",
-    "Avoid duplicate raw chart context during inference and process up to two queued requests concurrently"
+    "Avoid duplicate raw chart context during inference and process up to two queued requests concurrently",
+    "Confirm birthplace coordinates and timezone before calculation, preserve saved charts on failed edits, and show specific recoverable errors",
+    "Award an editable unique display username after chart creation; keep email and mobile out of the required birth profile",
+    "Add an evidence-backed agent explanation to the chart page and subtle motion that respects reduced-motion settings"
   ],
   "decisionLinks": [],
   "limitations": [
     "Shared live coding-session access, coordinator activation and automatic CI-to-Buzz publication are not activated",
     "Engine confidence is heuristic; astrology is not scientifically established prediction",
-    "Inherited KP computation-weekday rule and birth-period dasha are preserved, not current timing evidence"
+    "Inherited KP computation-weekday rule and birth-period dasha are preserved, not current timing evidence",
+    "Usernames are display identities, not login credentials or cross-device recovery; birthplace lookup depends on an external provider"
   ]
 }

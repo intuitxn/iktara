@@ -548,3 +548,11 @@ pre.data {
 }
 
 .answer-markdown { font-size: 16px; line-height: 1.85; }
+
+/* Small feedback on intentional actions; reduced-motion preference remains authoritative. */
+@media (prefers-reduced-motion: no-preference) {
+  .btn, .glass-card, .field input, .field select { transition: transform 140ms ease, box-shadow 180ms ease, border-color 180ms ease; }
+  .btn:hover:not(:disabled) { transform: translateY(-1px); }
+  .btn:active:not(:disabled), button.glass-card:active { transform: scale(.98); }
+  .field input:focus, .field select:focus { box-shadow: 0 0 0 3px rgba(74,127,212,.13); }
+}
